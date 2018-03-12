@@ -1,10 +1,10 @@
-GitHub Repository for STA 577
+GitHub Repository for STAA 577
 -----------
 Slides, code, cheat sheets, and RStudio lab notebooks for 
 "Applied Machine Learning" course Spring 2018
 
 
-### Datasets for STA 577
+### Datasets for STAA 577
 
 * **nyflights13**
   + new york city airport flight data from 2013 (**must install**)
@@ -28,26 +28,22 @@ Slides, code, cheat sheets, and RStudio lab notebooks for
     random sample of the overall dataset.
 
 
+### Hadley Wickham Book
+[R for Data Science](http://r4ds.had.co.nz/)
+
+
 ### Cheatsheets:
+RStudio [cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
 
-RStudio cheatsheets can be found here: [Cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
 
-
-### dplyr Vignette
-Here is a primer on [dplyr](https://cran.r-project.org/web/packages/dplyr/vignettes/dplyr.html)
+### Vignettes:
+  * [dplyr](https://cran.r-project.org/web/packages/dplyr/vignettes/dplyr.html)
+  * [tidyr](http://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html)
 
 
 ### What is the Tidyverse?
 Information about the
   * The [tidyverse](https://www.tidyverse.org/)
   * The tidyverse [packages](https://www.tidyverse.org/packages/)
-
-
-### Hadley Wickham Book
-[R for Data Science](http://r4ds.had.co.nz/)
-
-
-### Converting to the Tidyverse
-Some handy conversions found here at [Switching to the Tidyverse](http://www.significantdigits.org/2017/10/switching-from-base-r-to-tidyverse/)
-
+  * Converting to the [Tidyverse](http://www.significantdigits.org/2017/10/switching-from-base-r-to-tidyverse/)
 
