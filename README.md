@@ -14,11 +14,11 @@ Slides, code, cheat sheets, and RStudio lab notebooks for
   + install with `install.packages("AmesHousing", repos="http://cran.rstudio.com")`
 * **mtcars & mtcars2**
   + mtcars: USA motor trend cannonical data set (**comes with R installed**)
-  + mtcars2: An extension of mtcars by Max Kuhn with updated data and more features (** see \*.rda file**)
+  + mtcars2: An extension of mtcars by Max Kuhn with updated data and more features (**see Labs/data/mtcars2.rda**)
 * **iris**
   + classic iris flower data set from Fisher (**comes with R installed**)
 * **OkC**
-  + predicting STEM and other for various predictors (**see \*.rda file**)
+  + predicting STEM and other for various predictors (**see Labs/data/okc.rda**)
   + Contains several types of fields:
     - a number of open text essays related to interests and personal descriptions
     - single choice type fields, such as profession, diet, gender, body type, etc.
