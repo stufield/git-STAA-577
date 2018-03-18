@@ -14,15 +14,15 @@ fontsize: 12pt
 # Setup & Configuration
 
 * The code below will load the libraries you will need for this tutorial.
-```{r setup}
+```{r setup, results = 'hide'}
 options(width = 100)
 library(tibble)                         # special type of data frame
 library(magrittr)                       # pipes
 suppressMessages(library(dplyr))        # data manipulation
 library(nycflights13)                   # toy data set
-suppressMessages(library(lubridate))    # working with dates/times
 library(ggplot2)                        # pretty plots
 library(reshape2)                       # melt/reshape data frames
+suppressMessages(library(lubridate))    # working with dates/times
 ```
 * The data we will be using today is available via the `nycflights13` package.
 * R environment:
@@ -30,6 +30,20 @@ library(reshape2)                       # melt/reshape data frames
 ```{r, eval = FALSE}
 devtools::session_info()
 ```
+
+
+------------------------------------
+
+
+# What is Data Wrangling?
+
+**Data wrangling**, sometimes referred to as **data munging**, is the process of transforming and *mapping* data from one "raw" data form into another format with the intent of making it more appropriate and valuable for a variety of downstream purposes such as analytics. A data wrangler is a person who performs these transformation operations (see [wiki](https://en.wikipedia.org/wiki/Data_wrangling)).
+
+### What's this tutorial about?
+<center>
+  <img src="images/data-science-explore.png">
+</center>
+
 
 
 
@@ -715,8 +729,12 @@ flightsw %>%
 Above materials are derived in part from the following sources:
 
 * [RStudio Data Wrangling Cheat Sheet](http://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf)
+
 * Package Vignettes:
     + [dplyr](http://cran.r-project.org/web/packages/dplyr/vignettes/introduction.html)
     + [tidyr](http://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html)
-* [UseR 2014: dplyr Tutorial](https://www.dropbox.com/sh/i8qnluwmuieicxc/AAAgt9tIKoIm7WZKIyK25lh6a)
+    
+* Hadley Wickham's new book:
+    + [R for Data Science](http://r4ds.had.co.nz/)
 
+<img src="images/r4ds.jpg" width=200, height=400>

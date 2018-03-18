@@ -51,10 +51,19 @@ df <- data.frame(x = 1:3, y = c("a", "b", "c"), stringsAsFactors = FALSE)
 str(df)
 ```
 
-### Some general advice
-<img src="images/noStrings.jpeg" class="title-hex">
+### Some general `stringsAsFactors` advice
+You almost *always* want `stringsAsFactors = FALSE`
+
+Here is a little [background](https://simplystatistics.org/2015/07/24/stringsasfactors-an-unauthorized-biography/)
+
+<center>
+<img src="images/sayno.png" class="title-hex">
+</center>
 
 
+
+
+--------------------------
 
 
 # Length Coercion
