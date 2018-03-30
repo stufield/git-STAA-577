@@ -1,10 +1,10 @@
 # ------------------------------
 # Installation script for 577 course
 # ------------------------------
-
 from_cran <- c("AmesHousing",   # Housing data set from Ames
                "nycflights13",  # flights departing NYC in 2013 (data manipulation set)
                "magrittr",      # data manipulation via pipes
+               "rsample",       # bootstrap and cross-validation
                "devtools",      # development tools for R
                "tibble",        # generate 'tibble' class data frames
                "dplyr",         # data set manipulation
