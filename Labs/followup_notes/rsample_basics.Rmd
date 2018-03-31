@@ -1,0 +1,111 @@
+---
+title: "Simple rsample Basics"
+author: "Stu Field"
+date: "`r format(Sys.Date(), '%e %B %Y')`"
+output:
+  html_notebook: default
+ratio: '9:16'
+tables: yes
+fontsize: 12pt
+---
+
+
+## Contents
+1)  Create a simple bootstrap
+2)  Create LOO cross-validation
+3)  Create a simple 10-fold cross-validation
+
+
+## Setup
+Load necessary libraries and recase `iris` dataset:
+```{r, results = FALSE}
+library(tibble)
+library(magrittr)
+library(purrr)
+library(rsample)
+iris %<>% as.tibble()
+```
+
+Look at the basic functionality of `rsample`:
+``` r
+library(help = rsample)
+```
+
+
+## Bootstrap sampling (out-of-bag; OOB):
+Create some bootstrap sample sets from the `iris` data set
+```{r}
+set.seed(101)
+boot5 <- rsample::bootstraps(iris, times = 5)
+class(boot5)
+boot5
+```
+#### Notice:
+
+  * that `boot5` is a special class object (`bootstraps`, `rset`) but it's also a `tibble` object, so on it's base it's just a classy data frame. 
+  * We are used to seeing data frames contain scalars or single elements in each of it's n x p cells, however doesn't *have* to be the case. The `splits` column contains special `rsplit` objects. If you look closely at them with `str`, you'll see that they themselves are just lists, which themselves contain data frames and vectors of the indices for the samples that are included in the bootstrap.
+  * It's like a russian nesting doll of data!
+  * The advantage once this structure exists is that all one must do is iterate over the rows of the tibble (`boot5`) to proceed with the model fitting process. All the necessary information is contained in each `splits` column of the tibble.
+  * Conveniently, the `tidyverse` has a package called `purrr` which is full of specialized functions designed to make **iteration** easy.
+
+
+
+Proportion *virginica* species in original data:
+```{r}
+mean(iris$Species == "virginica")   # 1/3
+```
+
+Use the `purrr` package suite of iteration flavors of `map` to look at the proportion *virginica* by bootstrap "population":
+```{r}
+purrr::map_dbl(boot5$splits,
+  function(x) {
+  species <- as.data.frame(x)$Species
+  mean(species == "virginica")  # proportion shorthand
+})
+```
+
+
+## Leave-one-out cross-validation (LOOCV)
+Special case of k-fold cross-validation:
+
+```{r}
+set.seed(101)
+looCV <- rsample::loo_cv(iris)
+class(looCV)
+looCV
+```
+
+Find the missing (left-out) sample by iteration:
+```{r}
+purrr::map_dbl(looCV$splits,
+  function(x) {
+  setdiff(1:nrow(x$data), x$in_id)
+})
+```
+
+## Cross-Validation (CV)
+* k-fold cross-validation
+    * aka v-fold cross-validation
+    * aka x-fold cross-validation
+
+Generate 10-fold cross-validation data sets and store in object `cv10`
+```{r}
+set.seed(101)
+cv10 <- rsample::vfold_cv(iris, v = 10)
+dim(iris)   # 150 samples; 4 Features; 1 Class name "Species"
+```
+
+There *should* be 135 vs 15 samples in each of 10 folds, let's check:
+```{r}
+purrr::map_df(cv10$splits,
+  function(x) {
+  n_in  <- x$in_id
+  n_out <- setdiff(1:nrow(x$data), n_in)
+  fold  <- x$id %>% as.character()
+  data.frame(fold_id = fold,
+             samples_in = length(n_in),
+             samples_out = length(n_out))
+})
+```
+
+Created on `r Sys.Date()` by the [reprex package](http://reprex.tidyverse.org) (v`r utils::packageVersion("reprex")`).
