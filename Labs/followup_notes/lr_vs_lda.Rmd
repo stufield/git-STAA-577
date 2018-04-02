@@ -1,0 +1,57 @@
+---
+title: "Comparing Logistic Regression & LDA on Smarket Data Set"
+author: "Stu Field"
+date: "`r format(Sys.Date(), '%e %B %Y')`"
+output:
+  html_notebook: default
+ratio: '9:16'
+tables: yes
+fontsize: 12pt
+---
+
+```{r setup, include = FALSE}
+library(dplyr)
+library(tibble)
+library(MASS)
+library(ISLR)
+# training on marker prior to 2005
+train <- dplyr::filter(Smarket, Year < 2005)
+# test on data post-2004
+test  <- dplyr::filter(Smarket, Year >= 2005)
+```
+
+
+# Logistic Regression
+```{r LR}
+glm_pred <- stats::glm(Direction ~ Lag1 + Lag2 , data = train,
+                       family = "binomial") %>%
+  predict(newdata = test, type = "response")
+glm_class <- if_else(glm_pred > 0.5, "Up", "Down")
+# confusion matrix
+cmat <- table(truth = test$Direction, pred = glm_class)
+addmargins(cmat)
+# accuracy
+sum(diag(cmat)) / sum(cmat)
+```
+  
+----------------------  
+
+# LDA
+```{r LDA}
+lda_pred <- MASS::lda(Direction ~ Lag1 + Lag2, data = train) %>%
+  predict(newdata = test)
+# confusion matrix
+cmat <- table(truth = test$Direction, pred = lda_pred$class)
+addmargins(cmat)
+# accuracy
+sum(diag(cmat)) / sum(cmat)
+```
+
+
+# LR and LDA are *very* close but not identical
+```{r}
+predictions <- tibble(LR  = glm_pred,
+                      LDA = lda_pred$posterior[, "Up"]) %>%
+  mutate(difference = abs(LR - LDA))
+predictions
+```

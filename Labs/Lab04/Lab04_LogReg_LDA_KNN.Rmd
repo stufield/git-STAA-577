@@ -1,0 +1,283 @@
+---
+title: "STAA 577: Laboratory Four"
+author: "James, Witten, Hastie and Tibshirani"
+date: "`r format(Sys.Date(), '%e %B %Y')`"
+output:
+  html_notebook: default
+ratio: '9:16'
+tables: yes
+fontsize: 12pt
+---
+
+```{r setup, include = FALSE}
+library(dplyr)
+library(ggplot2)
+library(class)
+library(MASS)
+library(ISLR)
+```
+
+
+# The Stock Market Data
+```{r Stock_Market_Data, error = TRUE}
+class(Smarket)
+names(Smarket)
+dim(Smarket)
+Smarket %>% head(10)
+summary(Smarket)
+pairs(Smarket)
+cor(Smarket)                # Error; non-numerics
+class(Smarket$Direction)    # Factor
+cor(dplyr::select(Smarket, -Direction))
+Smarket %>%
+  ggplot(aes(x = 1:length(Volume), y = Volume)) +
+  geom_point() +
+  xlab("Time") +
+  geom_smooth()
+```
+
+--------------------------------
+
+
+# Logistic Regression I
+```{r Logistic_regression}
+glm.fit <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 +
+               Lag5 + Volume, data = Smarket, family = "binomial")
+class(glm.fit)
+summary(glm.fit)
+# Coefficients for each feature
+coef(glm.fit)
+# Statistical summary for each feature
+summary(glm.fit)$coef
+# P-values for each feature
+summary(glm.fit)$coef[, 4]
+
+# make predictions (training only)
+glm.probs <- predict(glm.fit, type = "response")
+class(glm.probs)
+glm.probs %>% head(10)
+Smarket$Direction %>% head(10)
+contrasts(Smarket$Direction)
+glm.pred <- ifelse(glm.probs > 0.5, "Up", "Down")
+
+# confusion matrix
+cmat <- table(truth = Smarket$Direction, pred = glm.pred)
+addmargins(cmat)
+
+# accuracy (training); diagonal of confusion matrix
+sum(diag(cmat)) / sum(cmat)
+
+# alternative method; sanity check
+mean(glm.pred == Smarket$Direction)  # proportion predicted correctly
+```
+
+
+
+  
+---------------------------
+
+# Logistic Regression II
+```{r Logistic_regression2, error = TRUE}
+# training on marker prior to 2005
+train <- dplyr::filter(Smarket, Year < 2005)
+
+# test on data post-2004
+test  <- dplyr::filter(Smarket, Year >= 2005)
+
+# perform sanity checks
+nrow(train)
+nrow(test)
+nrow(train) + nrow(test) == nrow(Smarket)  # check
+head(test$Direction)
+
+# fit LR model on training set
+glm.fit <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume,
+               data = train, family = "binomial")
+
+# predict on test set
+glm.probs <- predict(glm.fit, newdata = test, type = "response")
+
+# recast predictions
+cutoff   <- 0.5
+glm.pred <- ifelse(glm.probs > cutoff, "Up", "Down")
+
+# confusion matrix
+cmat <- table(truth = test$Direction, pred = glm.pred)
+addmargins(cmat)
+
+# accuracy
+acc <- sum(diag(cmat)) / sum(cmat)
+acc
+
+# sensitivity (predicting Up)
+sens <- prop.table(cmat["Up", ])[2]
+sens
+
+# specificity (predicting Down)
+spec <- prop.table(cmat["Down", ])[1]
+spec
+
+# sanity checks
+mean(glm.pred == test$Direction) == acc
+mean(glm.pred != test$Direction) == 1 - acc  # machine precision error!
+
+# try dplyr::near
+dplyr::near(mean(glm.pred != test$Direction), 1 - acc)
+```
+
+
+---------------------------
+
+
+# Logistic regression III
+```{r Logistic_regression3}
+# fit using only 2 predictors; Lag1 and Lag2
+glm.fit <- glm(Direction ~ Lag1 + Lag2 , data = train,
+               family = "binomial")
+glm.probs <- predict(glm.fit, newdata = test, type = "response")
+cutoff    <- 0.5
+glm.pred  <- ifelse(glm.probs > cutoff, "Up", "Down")
+
+# confusion matrix
+cmat <- table(truth = test$Direction, pred = glm.pred)
+addmargins(cmat)
+
+# accuracy
+acc <- sum(diag(cmat)) / sum(cmat)
+acc
+
+# sanity check
+mean(glm.pred == test$Direction) == acc
+
+# sensitivity (predicting Up)
+sens <- prop.table(cmat["Up", ])[2]
+sens
+
+# specificity (predicting Down)
+spec <- prop.table(cmat["Down", ])[1]
+spec
+
+# Make predictions of very specific values
+# of Lag1 and Lag2 also possible
+predict(glm.fit,
+        newdata = data.frame(Lag1 = c(1.2, 1.5),
+                             Lag2 = c(1.1, -0.8)),
+        type = "response")
+```
+  
+  
+----------------------  
+  
+  
+
+# Linear Discriminant Analysis (LDA)
+```{r LDA}
+lda.fit <- MASS::lda(Direction ~ Lag1 + Lag2, data = train)
+class(lda.fit)
+lda.fit
+plot(lda.fit)    # histogram
+lda.pred <- predict(lda.fit, newdata = test)
+head(lda.pred$posterior, 10)   # posterior probabilities each class
+lda.class <- lda.pred$class    # predicted class
+
+# confusion matrix
+cmat <- table(truth = test$Direction, pred = lda.class)
+addmargins(cmat)
+
+# accuracy
+acc <- sum(diag(cmat)) / sum(cmat)
+acc
+
+# sanity check
+mean(lda.class == test$Direction) == acc
+
+# sensitivity (predicting Up)
+sens <- prop.table(cmat["Up", ])[2]
+sens
+
+# specificity (predicting Down)
+spec <- prop.table(cmat["Down", ])[1]
+spec
+
+sum(lda.pred$posterior[, "Down"] >= 0.5)  # compare to addmargins() above
+sum(lda.pred$posterior[, "Down"] < 0.5)   # compare to addmargins() above
+sum(lda.pred$posterior[, "Down"] > 0.9)   # none are predicted at 0.9 or above
+```
+
+-------------------
+
+
+# Quadratic Discriminant Analysis (QDA)
+```{r QDA}
+qda.fit <- qda(Direction ~ Lag1 + Lag2, data = train)
+qda.fit
+qda.class <- predict(qda.fit, newdata = test)$class
+
+# confusion matrix
+cmat <- table(truth = test$Direction, pred = qda.class)
+addmargins(cmat)
+
+# accuracy
+acc <- sum(diag(cmat)) / sum(cmat)
+acc
+
+# sanity check
+mean(qda.class == test$Direction) == acc
+
+# sensitivity (predicting Up)
+sens <- prop.table(cmat["Up", ])[2]
+sens
+
+# specificity (predicting Down)
+spec <- prop.table(cmat["Down", ])[1]
+spec
+```
+  
+
+-----------------------
+
+
+# K-Nearest Neighbors (KNN)
+```{r KNN}
+training_classes <- train$Direction
+train %<>% dplyr::select(Lag1, Lag2)
+test_classes <- test$Direction
+test  %<>% dplyr::select(Lag1, Lag2)
+set.seed(1)
+
+# very small neighborhood of k = 1
+knn_pred_class <- class::knn(train, test, training_classes, k = 1)
+
+# confusion matrix
+cmat <- table(truth = test_classes, pred = knn_pred_class)
+addmargins(cmat)
+
+# accuracy: Really Bad for K = 1!
+acc <- sum(diag(cmat)) / sum(cmat)    # coin flip!
+acc
+
+# sanity check
+mean(knn_pred_class == test_classes) == acc
+
+# sensitivity (predicting Up)
+sens <- prop.table(cmat["Up", ])[2]
+sens
+
+# specificity (predicting Down)
+spec <- prop.table(cmat["Down", ])[1]
+spec
+```
+
+
+### Let's retry with varying neighborhood size.
+We will iterate over `1:10` for values of *k* using `purrr::map_df`.
+```{r varyK}
+purrr::map_df(1:10, function(x) {
+  cmat <- class::knn(train, test, training_classes, k = x) %>%
+    table(truth = test_classes, pred = .)
+  data.frame(K    = x,
+             acc  = sum(diag(cmat)) / sum(cmat),
+             sens = prop.table(cmat["Up", ])[2],
+             spec = prop.table(cmat["Down", ])[1])
+})
+```
