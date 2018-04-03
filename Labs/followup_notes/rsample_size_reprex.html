@@ -123,20 +123,24 @@ $(document).ready(function () {
 
 <pre class="r"><code>suppressMessages(library(tibble))
 suppressMessages(library(magrittr))
+suppressMessages(library(pryr))
 suppressMessages(library(rsample))
-iris %&gt;%
-  as.tibble %T&gt;% {
-  object.size(.) %&gt;%
-      format(units = &quot;KB&quot;) %&gt;%
-      stringr::str_c(&quot;Original Size: &quot;, .) %&gt;%
-      print()
-  } %&gt;%
-  rsample::bootstraps(times = 1000) %&gt;%
-  object.size(.) %&gt;%
-  format(units = &quot;KB&quot;) %&gt;%
-  stringr::str_c(&quot;Bootstrap Size: &quot;, .)
-#&gt; [1] &quot;Original Size: 7 Kb&quot;
-#&gt; [1] &quot;Bootstrap Size: 9321.8 Kb&quot;</code></pre>
+iris %&lt;&gt;% as.tibble
+x1 &lt;- pryr::compare_size(iris)
+x2 &lt;- rsample::bootstraps(iris, times = 1000) %&gt;%
+  pryr::compare_size(.)
+# Original Size:
+print(x1)
+#&gt; base pryr 
+#&gt; 7208 7152
+# Resample Size:
+print(x2)
+#&gt;    base    pryr 
+#&gt; 9545496 1416672
+# Ratio:
+print(x2/x1)
+#&gt;      base      pryr 
+#&gt; 1324.2919  198.0805</code></pre>
 <p>Created on 2018-04-02 by the <a href="http://reprex.tidyverse.org">reprex package</a> (v0.2.0).</p>
 
 
