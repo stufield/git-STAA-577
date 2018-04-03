@@ -9,14 +9,14 @@ Slides, code, cheat sheets, and RStudio lab notebooks for
 * **nyflights13**
   + new york city airport flight data from 2013 (**must install**)
   + install with `install.packages("nyflights13", repos="http://cran.rstudio.com")`
-* **Ames Data**
-  + An extension of Ames, Iowa housing data set by Max Kuhn (**must install**)
-  + install with `install.packages("AmesHousing", repos="http://cran.rstudio.com")`
+* **iris**
+  + classic iris flower data set from Fisher (**comes with R installed**)
 * **mtcars & mtcars2**
   + mtcars: USA motor trend cannonical data set (**comes with R installed**)
   + mtcars2: An extension of mtcars by Max Kuhn with updated data and more features (**see Labs/data/mtcars2.rda**)
-* **iris**
-  + classic iris flower data set from Fisher (**comes with R installed**)
+* **Ames Data**
+  + An extension of Ames, Iowa housing data set by Max Kuhn (**must install**)
+  + install with `install.packages("AmesHousing", repos="http://cran.rstudio.com")`
 * **OkC**
   + predicting STEM and other for various predictors (**see Labs/data/okc.rda**)
   + Contains several types of fields:
@@ -34,6 +34,10 @@ Slides, code, cheat sheets, and RStudio lab notebooks for
 
 ### Cheatsheets:
 RStudio [cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
+
+
+### Memory Usage and `rsample`:
+The [rsample](https://topepo.github.io/rsample/) package is smarter than you might think.
 
 
 ### Vignettes:
