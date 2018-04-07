@@ -36,6 +36,10 @@ Slides, code, cheat sheets, and RStudio lab notebooks for
 RStudio [cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
 
 
+### Model Framework
+![review-resamp-cache](https://user-images.githubusercontent.com/25203086/38456246-cbb2f6f4-3a3f-11e8-8b2e-135b62a07cc0.png)
+
+
 ### Memory Usage and `rsample`:
 The [rsample](https://topepo.github.io/rsample/) package is smarter than you might think.
 
