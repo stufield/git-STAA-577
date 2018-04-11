@@ -27,19 +27,30 @@ Slides, code, cheat sheets, and RStudio lab notebooks for
     STEM fields (science, technology, engineering, and math) using a 
     random sample of the overall dataset.
 
-### GitHub HTML Preview
-* Fairly useful tool to preview HTML docs *without* having to clone the repository
-* Right-click the \*.html file, copy the link, then go [here](https://htmlpreview.github.io/), paste the GitHub specific HTML link
-
-### Hadley Wickham Book
-[R for Data Science](http://r4ds.had.co.nz/)
-
-
 ### Cheatsheets:
 RStudio [cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
 
 
-### Modeling Framework
+### GitHub HTML Preview
+* Fairly useful tool to preview HTML docs *without* having to clone the repository
+* Right-click the \*.html file, copy the link, then go [here](https://htmlpreview.github.io/), paste the GitHub specific HTML link
+
+
+### Hadley Wickham Links
+* [Advanced R](http://adv-r.had.co.nz)
+* [R Packages](r-pkgs.had.co.nz/)
+* [R for Data Science Book](http://r4ds.had.co.nz/)
+* Twitter: @hadleywickham
+* GitHub: https://github.com/hadley
+
+
+### Max Kuhn's Links
+* [Applied Predictive Modeling Book](http://appliedpredictivemodeling.com)
+* Twitter: @topepo
+* GitHub: https://github.com/topepo
+
+
+### Modeling Framework (thx Max Kuhn)
 ![review-resamp-cache](https://user-images.githubusercontent.com/25203086/38456246-cbb2f6f4-3a3f-11e8-8b2e-135b62a07cc0.png)
 
 
