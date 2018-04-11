@@ -27,6 +27,9 @@ Slides, code, cheat sheets, and RStudio lab notebooks for
     STEM fields (science, technology, engineering, and math) using a 
     random sample of the overall dataset.
 
+### GitHub HTML Preview
+* Fairly useful tool to preview HTML docs *without* having to clone the repository
+* Right-click the \*.html file, copy the link, then go [here](https://htmlpreview.github.io/), paste the GitHub specific HTML link
 
 ### Hadley Wickham Book
 [R for Data Science](http://r4ds.had.co.nz/)
