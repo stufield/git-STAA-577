@@ -18,9 +18,9 @@ where $n_c$ is the number of classes in the target variable and $p_i$ is the rat
 
 ```{r}
 theme_set(theme_gray())
-ginifun <- function(p) 2 * p * (1 - p)        # does this look familiar?
+gini_fun <- function(p) 2 * p * (1 - p)        # does this look familiar?
 ggplot(data.frame(x = c(0, 1)), aes(x)) +
-  stat_function(fun = ginifun, geom = "line") +
+  stat_function(fun = gini_fun, geom = "line") +
   labs(x = expression(p[i]), y = "Impurity/Variance/Entropy") +
   ggtitle("Gini Impurity for 2 Classes") +
   theme(plot.title = element_text(hjust = 0.5))
@@ -32,6 +32,8 @@ And the *Gini Importance* (`I`) is calculated:
 
 $$I = G_{parent} - G_{split1} - G_{split2}$$
 
+-------------
+
 
 ## Setup
 Load necessary libraries for simulation:
@@ -40,6 +42,7 @@ library(tibble)
 library(magrittr)
 library(stringr)
 library(dplyr)
+library(reshape2)
 library(purrr)
 library(pROC)
 library(yardstick)
@@ -97,7 +100,7 @@ full_model
 ## Variable Importance Scores
 During bagging, variable importances scores for each tree are aggregated across all trees in the forest
 ```{r}
-importance(full_model) %>%
+randomForest::importance(full_model) %>%
   data.frame() %>%
   dplyr::rename(Gini_Importance = MeanDecreaseGini) %>%
   tibble::rownames_to_column("feat") %>%
@@ -112,7 +115,7 @@ importance(full_model) %>%
 We are going to take advantage of an under-appreciated quality of random forest models, the out-of-bag samples, which can be thought of as `pseudo-cross-validation`. This property will help avoid over-fitting during feature selection process below, though in a high-stakes model building setting you might still want a proper hold-out set for performance testing.
 
 
-## Performance on OOB samples
+### Performance on OOB samples
 ```{r, fig.width = 5, fig.height = 5, fig.align = "center"}
 # OOB samples
 rf_pred <- data.frame(truth = gini_data$class,
@@ -148,9 +151,9 @@ plot(roc_obj,
 ## Backward Feature Selection
 Now that we have a sense of what a full model with all features might look like, can we determine the minimal set of features necessary to maintain a given performance (e.g. AUC).
 ```{r}
-set.seed(100)
+set.seed(100)                # match 1st model above
 models   <- list()
-features <- names(gini_data)[names(gini_data)!="class"]
+features <- names(gini_data)[names(gini_data) != "class"]
 for ( i in 1:length(features) ) {
   
   rf <- randomForest::randomForest(class ~ .,
