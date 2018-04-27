@@ -1,0 +1,207 @@
+---
+title: "Gini Importance & Random Forest Backward Selection"
+author: "Stu Field"
+date: "`r format(Sys.Date(), '%e %B %Y')`"
+output:
+  html_notebook: default
+ratio: '9:16'
+tables: yes
+fontsize: 12pt
+---
+
+
+## What is Gini Importance?
+Every time a split of a node is made on variable `m` the *Gini Impurity* (`G`) criterion for the two child nodes is less than the parent node. Adding up the gini "losses" for each feature over all trees in the forest gives a fast variable importance that is often very consistent with the permutation importance measure. Thus `G` is calculated as:
+
+$$G = \sum_{i=1}^{n_c} p_i(1 - p_i),$$ 
+where $n_c$ is the number of classes in the target variable and $p_i$ is the ratio of this class. For example, for a two-class problem, the `G` is maximized at equal class proportions, and minimized for either homogeneous case.
+
+```{r}
+theme_set(theme_gray())
+ginifun <- function(p) 2 * p * (1 - p)        # does this look familiar?
+ggplot(data.frame(x = c(0, 1)), aes(x)) +
+  stat_function(fun = ginifun, geom = "line") +
+  labs(x = expression(p[i]), y = "Impurity/Variance/Entropy") +
+  ggtitle("Gini Impurity for 2 Classes") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+And the *Gini Importance* (`I`) is calculated:
+
+$$I = G_{parent} - G_{split1} - G_{split2}$$
+
+
+## Setup
+Load necessary libraries for simulation:
+```{r, results = FALSE}
+library(tibble)
+library(magrittr)
+library(stringr)
+library(dplyr)
+library(purrr)
+library(pROC)
+library(yardstick)
+library(randomForest)
+library(ggplot2)
+thm <- theme_bw() +
+  theme(
+    panel.background = element_rect(fill = "transparent", colour = NA),
+    plot.background = element_rect(fill = "transparent", colour = NA),
+    legend.position = "top",
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    legend.key = element_rect(fill = "transparent", colour = NA)
+  )
+theme_set(thm)
+```
+
+## Simulate Some Data
+```{r}
+set.seed(101)
+n_per_group <- 50
+n_features  <- 9
+gini_data   <- c(1.5, 1.0, 0.5, 0.25, 0, 0 , 0, 0, 0) %>%  # effect sizes; 5 noise variables
+  purrr::map_dfc(function(delta) {
+    c(rnorm(n_per_group, mean = 0, sd = 1),
+      rnorm(n_per_group, mean = delta, sd = 1))
+  }) %>%
+  set_names(paste0("F", 1:n_features)) %>%
+  dplyr::mutate(class = rep(c("C1", "C2"), each = n_per_group) %>% factor()) %>%
+  dplyr::select(class, everything())
+dim(gini_data)
+gini_data
+```
+
+
+## Plot Simulated Data
+Let's just make sure we've simulated what we think we have and check that the class distributions look reasonable.
+```{r, fig.width = 8, fig.height = 7, fig.align = "center"}
+gini_data %>%
+  reshape2::melt(id.vars = "class", variable.name = "feature") %>%
+  ggplot(aes(x = value, col = class)) +
+    geom_density() +
+    facet_wrap(~feature, ncol = 3)
+```
+
+
+## Fit Random Forest Model
+Let's fit a model with all `r n_features` features:
+```{r}
+set.seed(100)
+full_model <- randomForest::randomForest(class ~ ., data = gini_data)
+full_model
+```
+
+
+## Variable Importance Scores
+During bagging, variable importances scores for each tree are aggregated across all trees in the forest
+```{r}
+importance(full_model) %>%
+  data.frame() %>%
+  dplyr::rename(Gini_Importance = MeanDecreaseGini) %>%
+  tibble::rownames_to_column("feat") %>%
+    ggplot(aes(x = reorder(feat, -Gini_Importance), y = Gini_Importance)) +
+    geom_bar(stat = "identity") +
+    xlab("Feature")
+```
+
+
+
+## OOB (out-of-bag) Samples
+We are going to take advantage of an under-appreciated quality of random forest models, the out-of-bag samples, which can be thought of as `pseudo-cross-validation`. This property will help avoid over-fitting during feature selection process below, though in a high-stakes model building setting you might still want a proper hold-out set for performance testing.
+
+
+## Performance on OOB samples
+```{r, fig.width = 5, fig.height = 5, fig.align = "center"}
+# OOB samples
+rf_pred <- data.frame(truth = gini_data$class,
+                      vote  = full_model$votes[, "C2"],
+                      pred  = full_model$predicted)
+# prediction results
+head(rf_pred)
+
+# model performance metrics
+rf_pred %>% yardstick::conf_mat(truth = truth, estimate = pred)
+rf_pred %>% yardstick::accuracy(truth = truth, estimate = pred)
+rf_pred %>% yardstick::sens(truth = truth, estimate = pred)
+rf_pred %>% yardstick::spec(truth = truth, estimate = pred)
+
+# ROC object
+roc_obj <- pROC::roc(response  = rf_pred$truth,      # true class names
+                     predictor = rf_pred$vote,       # predicted values
+                     levels    = c("C1", "C2"))
+# AUC
+pROC::auc(roc_obj)
+
+# ROC curve
+plot(roc_obj,
+     col = "navy",
+     print.thres = c(0.3, 0.5, 0.8),
+     print.thres.cex = 0.8,
+     legacy.axes = TRUE,
+     print.thres.pattern = "cut = %.2f (Spec = %.2f, Sens = %.2f)")
+```
+
+
+
+## Backward Feature Selection
+Now that we have a sense of what a full model with all features might look like, can we determine the minimal set of features necessary to maintain a given performance (e.g. AUC).
+```{r}
+set.seed(100)
+models   <- list()
+features <- names(gini_data)[names(gini_data)!="class"]
+for ( i in 1:length(features) ) {
+  
+  rf <- randomForest::randomForest(class ~ .,
+                                   dplyr::select(gini_data,
+                                                 class,
+                                                 features))
+  
+  min_ft   <- rownames(rf$importance)[which.min(rf$importance)]
+  features <- setdiff(features, min_ft)
+  models[[paste0("Iter", i)]] <- rf
+  
+}
+sapply(models, importance)
+```
+
+
+## Performance by Feature Step
+```{r, fig.width = 7, fig.height= 7, fig.align = "center"}
+par(mfrow = c(3, 3))
+par(mgp = c(2, 0.75, 0), mar = c(2, 3, 2, 0))
+purrr::map_dbl(models, function(mod) {
+  .roc <- pROC::roc(gini_data$class,
+                    mod$votes[, "C2"],
+                    levels = c("C1", "C2"))
+  n_feat <- nrow(mod$importance)
+  auc    <- pROC::auc(.roc)
+  plot(.roc, col = "navy",
+       print.thres = 0.5,
+       lwd = 2,
+       main = stringr::str_glue("{n_feat} Features (AUC = {auc})"),
+       print.thres.cex = 0.75,
+       legacy.axes = TRUE,
+       print.thres.pattern = "cut = %.2f (Spec = %.2f, Sens = %.2f)"
+    )
+  return(auc)
+}) -> aucs
+```
+
+```{r}
+qplot(rev(seq(aucs)), aucs, xlab = "No. Features", ylab = "AUC") +
+  scale_x_continuous(breaks = seq(n_features)) +
+  geom_line(color = "navy") +
+  theme_gray()
+```
+
+
+
+## Resources
+* From the inventor of the random forest, Leo Breiman:
+[Random Forest](https://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm)
+* Breiman, L. (2001). Random forests. *Machine Learning*. 45(1), 5-32.
+
+
+Created on `r Sys.Date()` by the [rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`).
