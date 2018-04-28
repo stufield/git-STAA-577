@@ -3,17 +3,23 @@ title: "Gini Importance & Random Forest Backward Selection"
 author: "Stu Field"
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
-  html_notebook: default
+  html_notebook:
+    toc: true
+    toc_float:
+      collapsed: false
+    code_folding: show
+    number_sections: true
 ratio: '9:16'
 tables: yes
 fontsize: 12pt
 ---
 
 
-## What is Gini Importance?
+# What is Gini Importance?
 Every time a split of a node is made on variable `m` the *Gini Impurity* (`G`) criterion for the two child nodes is less than the parent node. Adding up the gini "losses" for each feature over all trees in the forest gives a fast variable importance that is often very consistent with the permutation importance measure. Thus `G` is calculated as:
 
-$$G = \sum_{i=1}^{n_c} p_i(1 - p_i),$$ 
+$$G = \sum_{i=1}^{n_c} p_i(1 - p_i),$$
+
 where $n_c$ is the number of classes in the target variable and $p_i$ is the ratio of this class. For example, for a two-class problem, the `G` is maximized at equal class proportions, and minimized for either homogeneous case.
 
 ```{r}
@@ -35,7 +41,7 @@ $$I = G_{parent} - G_{split1} - G_{split2}$$
 -------------
 
 
-## Setup
+# Setup
 Load necessary libraries for simulation:
 ```{r, results = FALSE}
 library(tibble)
@@ -59,7 +65,7 @@ thm <- theme_bw() +
 theme_set(thm)
 ```
 
-## Simulate Some Data
+# Simulate Some Data
 ```{r}
 set.seed(101)
 n_per_group <- 50
@@ -73,11 +79,12 @@ gini_data   <- c(1.5, 1.0, 0.5, 0.25, 0, 0 , 0, 0, 0) %>%  # effect sizes; 5 noi
   dplyr::mutate(class = rep(c("C1", "C2"), each = n_per_group) %>% factor()) %>%
   dplyr::select(class, everything())
 dim(gini_data)
-gini_data
+head(gini_data)
+tail(gini_data)
 ```
 
 
-## Plot Simulated Data
+# Plot Simulated Data
 Let's just make sure we've simulated what we think we have and check that the class distributions look reasonable.
 ```{r, fig.width = 8, fig.height = 7, fig.align = "center"}
 gini_data %>%
@@ -88,7 +95,7 @@ gini_data %>%
 ```
 
 
-## Fit Random Forest Model
+# Fit Random Forest Model
 Let's fit a model with all `r n_features` features:
 ```{r}
 set.seed(100)
@@ -97,7 +104,7 @@ full_model
 ```
 
 
-## Variable Importance Scores
+# Variable Importance Scores
 During bagging, variable importances scores for each tree are aggregated across all trees in the forest
 ```{r}
 randomForest::importance(full_model) %>%
@@ -111,11 +118,11 @@ randomForest::importance(full_model) %>%
 
 
 
-## OOB (out-of-bag) Samples
+# OOB (out-of-bag) Samples
 We are going to take advantage of an under-appreciated quality of random forest models, the out-of-bag samples, which can be thought of as `pseudo-cross-validation`. This property will help avoid over-fitting during feature selection process below, though in a high-stakes model building setting you might still want a proper hold-out set for performance testing.
 
 
-### Performance on OOB samples
+## Performance on OOB samples
 ```{r, fig.width = 5, fig.height = 5, fig.align = "center"}
 # OOB samples
 rf_pred <- data.frame(truth = gini_data$class,
@@ -148,7 +155,7 @@ plot(roc_obj,
 
 
 
-## Backward Feature Selection
+# Backward Feature Selection
 Now that we have a sense of what a full model with all features might look like, can we determine the minimal set of features necessary to maintain a given performance (e.g. AUC).
 ```{r}
 set.seed(100)                # match 1st model above
@@ -170,8 +177,8 @@ sapply(models, importance)
 ```
 
 
-## Performance by Feature Step
-```{r, fig.width = 7, fig.height= 7, fig.align = "center"}
+# Performance by Feature Step
+```{r, fig.width = 7, fig.height = 7, fig.align = "center"}
 par(mfrow = c(3, 3))
 par(mgp = c(2, 0.75, 0), mar = c(2, 3, 2, 0))
 purrr::map_dbl(models, function(mod) {
@@ -201,10 +208,19 @@ qplot(rev(seq(aucs)), aucs, xlab = "No. Features", ylab = "AUC") +
 
 
 
-## Resources
+# Resources
 * From the inventor of the random forest, Leo Breiman:
 [Random Forest](https://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm)
 * Breiman, L. (2001). Random forests. *Machine Learning*. 45(1), 5-32.
+
+
+
+--------------------------
+
+
+
+![**Sad But True**](every-time-you-write-a-loop-in-r-god-kills-a-kitten.jpg)
+
 
 
 Created on `r Sys.Date()` by the [rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`).
