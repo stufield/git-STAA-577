@@ -35,6 +35,8 @@ RStudio [cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
 * Fairly useful tool to preview HTML docs *without* having to clone the repository
 * Right-click the \*.html file, copy the link, then go [here](https://htmlpreview.github.io/), paste the GitHub specific HTML link
 
+### Sad But True
+![every-time-you-write-a-loop-in-r-god-kills-a-kitten](https://user-images.githubusercontent.com/25203086/39396951-8a8d2052-4ab4-11e8-8fe9-38aa67591ef1.jpg)
 
 ### Hadley Wickham Links
 * [Advanced R](http://adv-r.had.co.nz)
