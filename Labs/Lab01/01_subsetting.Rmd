@@ -3,7 +3,12 @@ title: "Subsetting Objects in R"
 author: "Simon Tavener andl Stu Field"
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
-  html_notebook: default
+  html_notebook:
+    toc: true
+    toc_float:
+      collapsed: false
+    code_folding: show
+    number_sections: true
 ratio: '9:16'
 tables: yes
 fontsize: 12pt

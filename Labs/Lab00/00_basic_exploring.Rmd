@@ -3,7 +3,12 @@ title: "Basic Exploration"
 author: "Simon Tavener and Stu Field"
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
-  html_notebook: default
+  html_notebook:
+    toc: true
+    toc_float:
+      collapsed: false
+    code_folding: show
+    number_sections: true
 ratio: '9:16'
 tables: yes
 fontsize: 12pt
@@ -65,7 +70,7 @@ split(iris[[1L]], iris$Species)
 split(iris[[which(names(iris)=="Sepal.Length")]], iris$Species)
 ```
 
-### What does the following command return?
+## Exercise: what does the following command return?
 ```{r, eval = FALSE}
 split(iris, iris$Species)
 ```
