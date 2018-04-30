@@ -35,8 +35,20 @@ RStudio [cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
 * Fairly useful tool to preview HTML docs *without* having to clone the repository
 * Right-click the \*.html file, copy the link, then go [here](https://htmlpreview.github.io/), paste the GitHub specific HTML link
 
+
 ### Sad But True
 ![every-time-you-write-a-loop-in-r-god-kills-a-kitten](https://user-images.githubusercontent.com/25203086/39396951-8a8d2052-4ab4-11e8-8fe9-38aa67591ef1.jpg)
+
+#### Stu's Looping Rules for R
+1. Always use a vectorized solution over iteration when possible, otherwise ... go to #2.
+2. Use a functional. Since R is a functional language and for readability, usually of the `apply()` family, or a loop-wrapper function, unless ...
+    1. **modifying in place:** if you are modifying or transforming certain subsets (columns) of a data frame.
+    2. **recursive problems:** whenever an iteration depends on the previous iteration, a loop is better suited because a     functional does not have access to variables outside the present lexical scope.
+    3. **while loops:** in problems where it is unknown how many iterations will be performed, while-loops are well suited and preferred over a functional.
+3. If you must use a loop, ensure the following:
+    1. **Initialize new objects:** prior to the loop, allocate the necessary space ahead of time. Do NOT "grow" a vector on-the-fly within a loop (this is terribly slow).
+    2. **Optimize operations:** do NOT perform operations inside the loop that could be done either up front of applied in a vectorized fashion following the loop. Enter the loop, do the bare minimum, then get out.
+
 
 ### Hadley Wickham Links
 * [Advanced R](http://adv-r.had.co.nz)
