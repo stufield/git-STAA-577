@@ -15,13 +15,52 @@ fontsize: 12pt
 ---
 
 
+Load necessary libraries for simulation:
+```{r, echo = FALSE, results = FALSE}
+library(tibble)
+library(magrittr)
+library(stringr)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(purrr)
+library(pROC)
+library(yardstick)
+library(randomForest)
+library(gridExtra)
+thm <- theme_bw() +
+  theme(
+    panel.background = element_rect(fill = "transparent", colour = NA),
+    plot.background = element_rect(fill = "transparent", colour = NA),
+    legend.position = "top",
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    legend.key = element_rect(fill = "transparent", colour = NA)
+  )
+theme_set(thm)
+```
+
+
 # What is Gini Importance?
 Every time a split of a node is made on variable `m` the *Gini Impurity* (`G`) criterion for the two child nodes is less than the parent node. Adding up the gini "losses" for each feature over all trees in the forest gives a fast variable importance that is often very consistent with the permutation importance measure. Thus `G` is calculated as:
 
 $$G = \sum_{i=1}^{n_c} p_i(1 - p_i),$$
 
-where $n_c$ is the number of classes in the target variable and $p_i$ is the ratio of this class. For example, for a two-class problem, the `G` is maximized at equal class proportions, and minimized for either homogeneous case.
+where $n_c$ is the number of classes in the target variable and $p_i$ is the ratio of this class. 
+A convenient property of the Gini impurity metric `G` is that it allows one to calculate a *theoretical maximum* that is based **solely** on the initial class distribution:
+```{r}
+# @param x A vector of the initial true classes
+gini_max <- function(x) {
+  L <- length(x)
+  unique(x) %>%
+    sort() %>%
+    purrr::map_dbl(function(.x)
+      mean(.x == x) * mean(.x != x) * L) %>%
+    sum()
+}
+```
 
+## Gini Example
+For a two-class problem, the `G` is maximized at equal class proportions, and minimized for either homogeneous case. **Note:** the goal is to *minimize* `G`:
 ```{r}
 theme_set(theme_gray())
 gini_fun <- function(p) 2 * p * (1 - p)        # does this look familiar?
@@ -33,37 +72,15 @@ ggplot(data.frame(x = c(0, 1)), aes(x)) +
 ```
 
 
-
 And the *Gini Importance* (`I`) is calculated:
 
 $$I = G_{parent} - G_{split1} - G_{split2}$$
 
+
+
 -------------
 
 
-# Setup
-Load necessary libraries for simulation:
-```{r, results = FALSE}
-library(tibble)
-library(magrittr)
-library(stringr)
-library(dplyr)
-library(reshape2)
-library(purrr)
-library(pROC)
-library(yardstick)
-library(randomForest)
-library(ggplot2)
-thm <- theme_bw() +
-  theme(
-    panel.background = element_rect(fill = "transparent", colour = NA),
-    plot.background = element_rect(fill = "transparent", colour = NA),
-    legend.position = "top",
-    legend.background = element_rect(fill = "transparent", colour = NA),
-    legend.key = element_rect(fill = "transparent", colour = NA)
-  )
-theme_set(thm)
-```
 
 # Simulate Some Data
 ```{r}
@@ -104,6 +121,11 @@ full_model
 ```
 
 
+
+
+
+
+
 # Variable Importance Scores
 During bagging, variable importances scores for each tree are aggregated across all trees in the forest
 ```{r}
@@ -113,7 +135,7 @@ randomForest::importance(full_model) %>%
   tibble::rownames_to_column("feat") %>%
     ggplot(aes(x = reorder(feat, -Gini_Importance), y = Gini_Importance)) +
     geom_bar(stat = "identity") +
-    xlab("Feature")
+    labs(x = "Feature")
 ```
 
 
@@ -200,7 +222,8 @@ purrr::map_dbl(models, function(mod) {
 ```
 
 ```{r}
-qplot(rev(seq(aucs)), aucs, xlab = "No. Features", ylab = "AUC") +
+qplot(rev(seq(aucs)), aucs) +
+  labs(x = "No. Features", y = "AUC") +
   scale_x_continuous(breaks = seq(n_features)) +
   geom_line(color = "navy") +
   theme_gray()
@@ -208,9 +231,33 @@ qplot(rev(seq(aucs)), aucs, xlab = "No. Features", ylab = "AUC") +
 
 
 
+
+# Appendix: Theoretical Gini Max
+From the `gini_max` function above, we can write a function to plot the `Gini Importance` with a rescaled y-axis reflecting `I` as a proportion of the theoretical maximum:
+```{r, fig.width = 8, fig.height = 9}
+plotGiniMax <- function(model, max) {
+  
+  randomForest::importance(model) %>%
+    data.frame() %>%
+    tibble::rownames_to_column("feat") %>%
+    dplyr::mutate(Gini_Proportion = MeanDecreaseGini / max) %>%
+      ggplot(aes(x = reorder(feat, -Gini_Proportion), y = Gini_Proportion)) +
+      geom_bar(stat = "identity") +
+      ylim(0, 1) +
+      xlab("Feature")
+  
+}
+max_g <- gini_max(gini_data$class)
+purrr::map(models, plotGiniMax, max = max_g) %>%
+  do.call(gridExtra::grid.arrange, .)
+```
+
+
+
+
+
 # Resources
-* From the inventor of the random forest, Leo Breiman:
-[Random Forest](https://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm)
+* From Leo Breiman, the inventor of the [Random Forest](https://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm)
 * Breiman, L. (2001). Random forests. *Machine Learning*. 45(1), 5-32.
 
 
