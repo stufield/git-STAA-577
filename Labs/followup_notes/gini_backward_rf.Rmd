@@ -50,12 +50,9 @@ A convenient property of the Gini impurity metric `G` is that it allows one to c
 ```{r}
 # @param x A vector of the initial true classes
 gini_max <- function(x) {
-  L <- length(x)
-  unique(x) %>%
-    sort() %>%
-    purrr::map_dbl(function(.x)
-      mean(.x == x) * mean(.x != x) * L) %>%
-    sum()
+  purrr::map_dbl(unique(x), function(.x)
+    mean(.x == x) * mean(.x != x)) %>%
+    sum() * length(x)                   # scale the sum by no. samples
 }
 ```
 
