@@ -123,25 +123,30 @@ $(document).ready(function () {
 
 <pre class="r"><code>suppressMessages(library(tibble))
 suppressMessages(library(magrittr))
-suppressMessages(library(pryr))
 suppressMessages(library(rsample))
-iris %&lt;&gt;% as.tibble
-x1 &lt;- pryr::compare_size(iris)
+# devtools::install_github(&quot;r-lib/lobstr&quot;)  # install dev version
+suppressMessages(library(lobstr))
+compare_size &lt;- function(x) {
+  c(base   = utils::object.size(x),
+    lobstr = lobstr::obj_size(x))
+}
+iris %&lt;&gt;% as.tibble()
+x1 &lt;- compare_size(iris)
 x2 &lt;- rsample::bootstraps(iris, times = 1000) %&gt;%
-  pryr::compare_size(.)
+  compare_size()
 # Original Size:
 print(x1)
-#&gt; base pryr 
-#&gt; 7208 7152
+#&gt;   base lobstr 
+#&gt;   7208   7152
 # Resample Size:
 print(x2)
-#&gt;    base    pryr 
+#&gt;    base  lobstr 
 #&gt; 9545496 1416672
 # Ratio:
 print(x2/x1)
-#&gt;      base      pryr 
+#&gt;      base    lobstr 
 #&gt; 1324.2919  198.0805</code></pre>
-<p>Created on 2018-04-02 by the <a href="http://reprex.tidyverse.org">reprex package</a> (v0.2.0).</p>
+<p>Created on 2018-05-20 by the <a href="http://reprex.tidyverse.org">reprex package</a> (v0.2.0).</p>
 
 
 
