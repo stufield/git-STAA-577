@@ -1,6 +1,6 @@
 ---
-title: "STAA 577: Laboratory Four"
-author: "James, Witten, Hastie and Tibshirani"
+title: "STAA 577: Laboratory Four </br> `tidyverse` version"
+author: "Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani"
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
   html_notebook:
@@ -15,30 +15,33 @@ fontsize: 12pt
 ---
 
 ```{r setup, include = FALSE}
-library(dplyr)
-library(ggplot2)
-library(class)
-library(MASS)
-library(ISLR)
+library(magrittr)     # pipes
+library(dplyr)        # data wrangling
+library(purrr)        # iteration
+library(ggplot2)      # tidy plotting
+library(broom)        # summarize model objects uniformly
+library(class)        # KNN
+library(MASS)         # qda()
+library(ISLR)         # Smarket data set
 ```
 
 
-# The Stock Market Data
+# The S&P Stock Market Data `Smarket`
 ```{r Stock_Market_Data, error = TRUE}
 class(Smarket)
-names(Smarket)
-dim(Smarket)
-Smarket %>% head(10)
-summary(Smarket)
-pairs(Smarket)
-cor(Smarket)                # Error; non-numerics
-class(Smarket$Direction)    # Factor
-cor(dplyr::select(Smarket, -Direction))
+names(Smarket)                           # List features/covariates available
+dim(Smarket)                             # dimenstions of data
+Smarket %>% head(10)                     # Top 10 rows of data frame
+summary(Smarket)                         # S3 summary method for class `data.frame`
+pairs(Smarket)                           # pairs plot of 9-choose-2 combinations
+cor(Smarket)                             # Error; non-numerics in 'Direction'
+class(Smarket$Direction)                 # Factor
+cor(dplyr::select(Smarket, -Direction))  # remove 'Direction' and retry
 Smarket %>%
-  ggplot(aes(x = 1:length(Volume), y = Volume)) +
-  geom_point() +
+  ggplot(aes(x = 1:length(Volume), y = Volume)) +   # plot `Volume` over time
+  geom_point() +                                    # points
   xlab("Time") +
-  geom_smooth()
+  geom_smooth()                                     # smooth fit
 ```
 
 --------------------------------
@@ -49,21 +52,19 @@ Smarket %>%
 glm.fit <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 +
                Lag5 + Volume, data = Smarket, family = "binomial")
 class(glm.fit)
-summary(glm.fit)
-# Coefficients for each feature
-coef(glm.fit)
-# Statistical summary for each feature
-summary(glm.fit)$coef
-# P-values for each feature
-summary(glm.fit)$coef[, 4]
+summary(glm.fit)       # Coefficients for each feature
+coef(glm.fit)          # Statistical summary for each feature
+sum_tbl <- broom::tidy(glm.fit)   # use `broom` to easily summarize model objects
+sum_tbl                           # take a look
+sum_tbl %>% dplyr::pull(p.value)  # P-values for each covariate
 
 # make predictions (training only)
-glm.probs <- predict(glm.fit, type = "response")
+glm.probs <- predict(glm.fit, type = "response")    # S3 predict method
 class(glm.probs)
 glm.probs %>% head(10)
 Smarket$Direction %>% head(10)
 contrasts(Smarket$Direction)
-glm.pred <- ifelse(glm.probs > 0.5, "Up", "Down")
+glm.pred <- ifelse(glm.probs > 0.5, "Up", "Down")  # predict @ 0.5 cutoff
 
 # confusion matrix
 cmat <- table(truth = Smarket$Direction, pred = glm.pred)
@@ -92,15 +93,13 @@ test  <- dplyr::filter(Smarket, Year >= 2005)
 # perform sanity checks
 nrow(train)
 nrow(test)
-nrow(train) + nrow(test) == nrow(Smarket)  # check
+nrow(train) + nrow(test) == nrow(Smarket)  # sanity check
 head(test$Direction)
 
 # fit LR model on training set
-glm.fit <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume,
-               data = train, family = "binomial")
-
-# predict on test set
-glm.probs <- predict(glm.fit, newdata = test, type = "response")
+glm.probs <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume,
+                 data = train, family = "binomial")  %>%  # fit LR model
+  predict(newdata = test, type = "response")     # predict on test set
 
 # recast predictions
 cutoff   <- 0.5
@@ -137,7 +136,8 @@ dplyr::near(mean(glm.pred != test$Direction), 1 - acc)
 # Logistic regression III
 ```{r Logistic_regression3}
 # fit using only 2 predictors; Lag1 and Lag2
-glm.fit <- glm(Direction ~ Lag1 + Lag2 , data = train,
+glm.fit <- glm(Direction ~ Lag1 + Lag2 ,
+               data = train,
                family = "binomial")
 glm.probs <- predict(glm.fit, newdata = test, type = "response")
 cutoff    <- 0.5
@@ -171,7 +171,7 @@ predict(glm.fit,
 ```
   
   
-----------------------  
+----------------------
   
   
 
@@ -180,8 +180,8 @@ predict(glm.fit,
 lda.fit <- MASS::lda(Direction ~ Lag1 + Lag2, data = train)
 class(lda.fit)
 lda.fit
-plot(lda.fit)    # histogram
-lda.pred <- predict(lda.fit, newdata = test)
+plot(lda.fit)                  # S3 plot method; histogram
+lda.pred <- predict(lda.fit, newdata = test)   # S3 predict method
 head(lda.pred$posterior, 10)   # posterior probabilities each class
 lda.class <- lda.pred$class    # predicted class
 
@@ -237,12 +237,12 @@ sens
 spec <- prop.table(cmat["Down", ])[1]
 spec
 ```
-  
+
 
 -----------------------
 
 
-# K-Nearest Neighbors (KNN)
+# KNN: K-Nearest Neighbors
 ```{r KNN}
 training_classes <- train$Direction
 train %<>% dplyr::select(Lag1, Lag2)
@@ -274,7 +274,7 @@ spec
 ```
 
 
-### Let's retry with varying neighborhood size.
+## Let's retry with varying neighborhood size.
 We will iterate over `1:10` for values of *k* using `purrr::map_df`.
 ```{r varyK}
 purrr::map_df(1:10, function(x) {
