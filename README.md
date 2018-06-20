@@ -3,6 +3,43 @@ GitHub Repository for STAA 577
 Slides, code, cheat sheets, and RStudio lab notebooks for 
 "Applied Machine Learning" course Spring 2018
 
+### Lab Content
+* Intro Labs
+  + Lab 00 - Basic Exploring
+  + Lab 01 - Subsetting (data frames)
+  + Lab 02 - Data Wrangling with `dplyr` and the `tidyverse`
+  + Lab 03 - Skipped to synchronize course and textbook
+* Lab 04
+  + Logistic Regression
+  + Linear and Quadratic Discriminant Analysis
+  + K-nearest Neighbors
+* Lab 05
+  + Cross-validation
+  + LOOCV (leave-one-out)
+  + K-fold Cross-validation
+  + The Bootstrap
+* Lab 06
+  + Best Subset Selection
+  + Forward and Backward Stepwise Selection
+  + Ridge Regression
+  + The Lasso
+* Lab 07
+  + Polynomial Regression
+  + Polynomial Logistic Regression
+  + Spline Fitting
+* Lab 08
+  + Classification Trees
+  + Regression Trees
+  + Bagging
+  + Random Forests
+  + Boosting
+* Lab 09
+  + Support Vector Machines
+  + SVM in Classification
+* Lab 10
+  + Principal Component Analysis (PCA)
+  + K-means Clustering
+  + Heirarchial Clustering
 
 ### Datasets for STAA 577
 
