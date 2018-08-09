@@ -1,0 +1,336 @@
+---
+title: 'STAA 577: Laboratory Six </br> `tidyverse` version'
+author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
+date: "`r format(Sys.Date(), '%e %B %Y')`"
+output:
+  html_notebook: 
+    code_folding: show
+    number_sections: yes
+    toc: yes
+    toc_float:
+      collapsed: no
+ratio: '9:16'
+tables: yes
+fontsize: 12pt
+---
+
+```{r setup, include = FALSE}
+options(warnPartialMatchArgs = FALSE)  # don't want these warnings
+library(magrittr)     # pipes
+library(tibble)       # tibbles
+library(dplyr)        # data wrangling
+library(boot)         # for `cv.glm`
+library(purrr)        # iteration
+library(ggplot2)      # tidy plotting
+library(ISLR)         # Hitters data set
+library(leaps)        # step-wise model selection
+library(glmnet)
+```
+
+```{r data}
+# Explore data set
+Hitters %<>% as.tibble()      # let's be tidy and convert to tibble
+names(Hitters)                # what are the variables to work with?
+Hitters                       # view the tibble
+sum(is.na(Hitters$Salary))    # there are 59 observations without Salary info
+Hitters %<>% na.omit()        # let's remove them
+nrow(Hitters)                 # we now have 263 observations
+sum(is.na(Hitters))           # and no more missing data for Salary
+```
+
+# Subset Selection
+The `leaps::regsubsets` function performs an exhaustive search for the best 
+subsets of the variables in `x` for predicting `y` in a Linear 
+Regression setting, using an efficient branch-and-bound algorithm. It chooses
+the best subset based on RSS. See `?leaps::regsubsets`.
+
+```{r subset_selection}
+regfit.full <- leaps::regsubsets(Salary ~ ., Hitters)
+
+# Best two-variable model contains 
+# Hits and CRBI features
+summary(regfit.full)
+
+regfit.full <- leaps::regsubsets(Salary ~ ., data = Hitters, nvmax = 19)
+summary(regfit.full)
+reg.summary = summary(regfit.full)
+names(reg.summary)
+reg.summary$rsq
+reg.summary$rss
+reg.summary$adjr2
+par(mfrow = c(2, 2))
+plot(reg.summary$rss, xlab = "Number of Variables", ylab = "RSS", type = "l")
+plot(reg.summary$adjr2, xlab = "Number of Variables", ylab = "Adjusted RSq", type = "l")
+#
+which.max(reg.summary$adjr2)
+points(11,reg.summary$adjr2[11], col="red",cex=2, pch=20)
+plot(reg.summary$cp,xlab="Number of Variables",ylab="Cp",type='l')
+which.min(reg.summary$cp)
+points(10,reg.summary$cp[10],col="red",cex=2,pch=20)
+which.min(reg.summary$bic)
+plot(reg.summary$bic,xlab="Number of Variables",ylab="BIC",type='l')
+points(6,reg.summary$bic[6],col="red",cex=2,pch=20)
+```
+
+
+The `leaps` package has a has a built in S3 plot method 
+for class `regsubsets` which can be used to display the
+selected variables for the best model for a 
+given number of predictors, ranked according to $R^2$. See `?plot.regsubsets`.
+
+```{r plot_subsets}
+par(mfrow = c(2, 2))
+plot(regfit.full, scale = "r2")
+plot(regfit.full, scale = "adjr2")
+plot(regfit.full, scale = "Cp")
+plot(regfit.full, scale = "bic")
+coef(regfit.full, 6)
+coef(regfit.full, 10)
+```
+
+
+
+## Forward and Backward Step-wise Selection
+```{r stepwise_seln}
+regfit.fwd <- leaps::regsubsets(Salary ~ ., data = Hitters,
+                                nvmax = 19, method = "forward")
+summary(regfit.fwd)
+#regfit.fwd[2]
+#regfit.fwd[[2]]
+regfit.bwd <- leaps::regsubsets(Salary ~ ., data = Hitters,
+                                nvmax = 19, method = "backward")
+summary(regfit.bwd)
+
+# Compare the models selected by each approach
+coef(regfit.full, 7)
+coef(regfit.fwd, 7)
+coef(regfit.bwd, 7)
+```
+
+
+
+## Choosing Among Models
+
+```{r Choosing_models}
+set.seed(1)
+train <- sample(c(TRUE, FALSE), nrow(Hitters), rep = TRUE)
+head(train)
+test <- !train    # invert logical
+regfit.best <- leaps::regsubsets(Salary ~ . ,
+                                 data = Hitters[train, ],
+                                 nvmax = 19)
+test.mat <- model.matrix(Salary ~ ., data = Hitters[test,])
+?model.matrix
+test.mat
+
+# Let's try to figure out what's going on in the loop below
+val.errors <- rep(NA,19)
+coefi <- coef(regfit.best, id = 1)
+test.mat[, names(coefi)]
+coefi
+test.mat[, names(coefi)]%*%coefi
+coefi <- coef(regfit.best, id = 2)
+test.mat[, names(coefi)]
+coefi
+test.mat[, names(coefi)]%*%coefi
+
+#
+for (i in 1:19) {
+  coefi <- coef(regfit.best, id = i)
+  test.mat[,names(coefi)]
+  #print(coefi)
+  pred <- test.mat[,names(coefi)]%*%coefi
+  #print(pred)
+  val.errors[i] <- mean((Hitters$Salary[test] - pred)^2)
+}
+val.errors
+which.min(val.errors)
+coef(regfit.best, 10)
+```
+
+
+
+
+### Define a S3 `predict` method
+There is no `predict` method for objects of class `regbubsets`, so we
+will create our own to replicated the steps above and simplify things
+moving forward. S3 methods are not complicated, they just define a
+specific behavior for a given class object (first argument) they act on.
+
+
+```{r defn}
+predict.regsubsets <- function(object, newdata, id, ...) {
+  form <- as.formula(object$call[[2]])
+  #print(form)
+  mat   <- model.matrix(form, newdata)
+  coefi <-coef(object, id = id)
+  xvars <-names(coefi)
+  mat[, xvars]%*%coefi
+}
+```
+
+## Choosing Among Models: cross-validation
+```{r cv}
+regfit.best <- leaps::regsubsets(Salary ~ ., data = Hitters, nvmax = 19)
+coef(regfit.best, 10)
+k <- 10
+set.seed(1)
+folds <- sample(1:k, nrow(Hitters), replace = TRUE)
+folds
+cv.errors <- matrix(NA, k, 19, dimnames = list(NULL, paste(1:19)))
+
+# k-fold cross validation
+for (j in 1:k) {
+  best.fit <- leaps::regsubsets(Salary ~ .,
+                                data = Hitters[folds!=j, ],
+                                nvmax = 19)
+  # Loop over best models with 1 to 19 predictors
+  for (i in 1:19) {
+    pred <- predict(best.fit, Hitters[folds==j, ], id = i)
+    cv.errors[j, i] <- mean((Hitters$Salary[folds==j] - pred)^2)
+  }
+}
+
+# Calculate the mean for each column; 19 variables
+mean.cv.errors <- apply(cv.errors, 2, mean)
+mean.cv.errors
+par(mfrow = c(1, 1))
+plot(mean.cv.errors, type = "b")
+reg.best <- leaps::regsubsets(Salary ~ . , data = Hitters, nvmax = 19)
+coef(reg.best, 11)
+```
+
+
+
+-----------------------------
+
+
+
+# Shrinkage Methods
+
+## Ridge Regression I
+We redefine the `Hitters` data set to include only the model matrix `x`
+containing features (predictors) and a separate `y` variable
+for the `Response` (Salary).
+
+```{r ridge_data}
+x <- model.matrix(Salary ~ ., Hitters)[, -1]
+head(x, 10)
+y <- Hitters$Salary
+print(y)
+```
+
+Now perform a sweep across the tuning parameter `lambda` using
+the `glmnet::glmnet` function.
+
+```{r ridge_regression}
+# lambda = 10^{10} effectively reduces the model to the mean
+# lambda = 10^{-2} is effectively linear regression
+grid <- 10^seq(10, -2, length = 100)
+print(grid)
+
+# Note: alpha is the elastic net parameter, alpha \in [0,1]
+#       alpha = 0 selects ridge regression; alpha = 1 selects lasso
+ridge.mod <- glmnet(x, y, alpha = 0, lambda = grid)
+
+# Matrix of coefficients for each value of penalty parameter
+dim(coef(ridge.mod))
+class(ridge.mod)
+
+# Select the 50th value of the penalty parameter
+ridge.mod$lambda[50]
+coef(ridge.mod)[, 50]
+sqrt(sum(coef(ridge.mod)[-1, 50]^2))
+sqrt(sum(coef(ridge.mod)[2:20, 50]^2))
+#
+ridge.mod$lambda[60]
+coef(ridge.mod)[, 60]
+sqrt(sum(coef(ridge.mod)[-1, 60]^2))
+
+# Find coefficients for penalty parameter (lambda) = 50
+predict(ridge.mod, s = 50, type = "coefficients")[1:20, ]
+# x=50 is bracketed by the 69th and 70th penalties
+ridge.mod$lambda[69]
+coef(ridge.mod)[, 69]
+ridge.mod$lambda[70]
+coef(ridge.mod)[, 70]
+```
+
+
+## Ridge Regression II
+
+```{r ridge_regression2}
+# Create training and test sets
+set.seed(1)
+n      <- nrow(x)
+train  <- sample(1:n, n/2)
+test   <-(-train)
+y.test <- y[test]
+
+# Estimating the test error
+ridge.mod <- glmnet(x[train,], y[train],
+                    alpha = 0, lambda = grid,
+                    thresh = 1e-12)
+ridge.pred <- predict(ridge.mod, s = 4, newx = x[test,])
+mean((ridge.pred - y.test)^2)
+
+# Exploring limits: large lambda
+# Predicting using the mean of the training data
+mean((mean(y[train]) - y.test)^2)
+
+# An extremely large penalty essentially reduces beta_1 to beta_p to be zero
+# i.e., the prediction becomes the mean for all predictors
+ridge.pred <- predict(ridge.mod, s = 1e10, newx = x[test, ])
+mean((ridge.pred - y.test)^2)
+
+# Exploring limits: small lambda
+ridge.pred <- predict(ridge.mod, s = 0, newx = x[test, ])
+mean((ridge.pred - y.test)^2)
+lm(y ~ x, subset = train)
+predict(ridge.mod, s = 0, type = "coefficients")[1:20, ]
+```
+
+## Ridge Regression III
+
+```{r ridge_regression3}
+# V-fold cross validation (default nfold=10)
+set.seed(1)
+cv.out <- cv.glmnet(x[train, ], y[train], alpha = 0)
+plot(cv.out)
+bestlam <- cv.out$lambda.min
+bestlam
+#
+ridge.pred <- predict(ridge.mod, s = bestlam, newx = x[test, ])
+mean((ridge.pred - y.test)^2)
+
+# Fit on full data set
+fit <- glmnet(x, y, alpha = 0)
+predict(fit, type = "coefficients", s = bestlam)[1:20, ]
+```
+
+
+-------------------------------
+
+
+## The Lasso
+
+```{r lasso}
+lasso.mod <- glmnet(x[train, ], y[train], alpha = 1, lambda = grid)
+
+# Plot coefficients as a function of penalty parameter
+plot(lasso.mod)
+
+# V-fold cross validation (default nfold=10)
+set.seed(1)
+cv.out <- cv.glmnet(x[train, ], y[train], alpha = 1)
+plot(cv.out)
+bestlam    <- cv.out$lambda.min
+lasso.pred <- predict(lasso.mod, s = bestlam, newx = x[test, ])
+mean((lasso.pred - y.test)^2)
+#
+fit        <- glmnet(x, y, alpha = 1, lambda = grid)
+lasso.coef <- predict(fit, type = "coefficients", s = bestlam)[1:20, ]
+lasso.coef
+lasso.coef[lasso.coef != 0]
+```
+ 
