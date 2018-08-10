@@ -24,6 +24,7 @@ library(purrr)        # iteration
 library(ggplot2)      # tidy plotting
 library(ISLR)         # Hitters data set
 library(leaps)        # step-wise model selection
+library(gridExtra)    # arranging ggplots into grids
 library(glmnet)
 ```
 
@@ -31,12 +32,18 @@ library(glmnet)
 # Explore data set
 Hitters %<>% as.tibble()      # let's be tidy and convert to tibble
 names(Hitters)                # what are the variables to work with?
-Hitters                       # view the tibble
+Hitters                       # view the tibble; 322 observations
 sum(is.na(Hitters$Salary))    # there are 59 observations without Salary info
 Hitters %<>% na.omit()        # let's remove them
 nrow(Hitters)                 # we now have 263 observations
 sum(is.na(Hitters))           # and no more missing data for Salary
 ```
+
+
+
+------------------------
+
+
 
 # Subset Selection
 The `leaps::regsubsets` function performs an exhaustive search for the best 
@@ -45,66 +52,103 @@ Regression setting, using an efficient branch-and-bound algorithm. It chooses
 the best subset based on RSS. See `?leaps::regsubsets`.
 
 ```{r subset_selection}
-regfit.full <- leaps::regsubsets(Salary ~ ., Hitters)
+regfit_full <- leaps::regsubsets(Salary ~ ., Hitters)
 
 # Best two-variable model contains 
 # Hits and CRBI features
-summary(regfit.full)
+# Rather verbose print method; only look at `obj` entry (Simon; pls double check)
+summary(regfit_full)$obj
 
-regfit.full <- leaps::regsubsets(Salary ~ ., data = Hitters, nvmax = 19)
-summary(regfit.full)
-reg.summary = summary(regfit.full)
-names(reg.summary)
-reg.summary$rsq
-reg.summary$rss
-reg.summary$adjr2
-par(mfrow = c(2, 2))
-plot(reg.summary$rss, xlab = "Number of Variables", ylab = "RSS", type = "l")
-plot(reg.summary$adjr2, xlab = "Number of Variables", ylab = "Adjusted RSq", type = "l")
-#
-which.max(reg.summary$adjr2)
-points(11,reg.summary$adjr2[11], col="red",cex=2, pch=20)
-plot(reg.summary$cp,xlab="Number of Variables",ylab="Cp",type='l')
-which.min(reg.summary$cp)
-points(10,reg.summary$cp[10],col="red",cex=2,pch=20)
-which.min(reg.summary$bic)
-plot(reg.summary$bic,xlab="Number of Variables",ylab="BIC",type='l')
-points(6,reg.summary$bic[6],col="red",cex=2,pch=20)
+regfit_full <- leaps::regsubsets(Salary ~ ., data = Hitters, nvmax = 19)
+reg_summary <- summary(regfit_full)
+names(reg_summary)
+reg_summary$obj
+```
+
+Now let's view the results, both as a `tibble` and graphically
+with `ggplot2::qplot`:
+
+```{r subset_selection2}
+# View the model performance metrics for each size model
+tibble::tibble(
+  RSS = reg_summary$rss,
+  `R-squared` = reg_summary$rsq,
+  `Adj_R-squared` = reg_summary$adjr2,
+  CP = reg_summary$cp,
+  BIC = reg_summary$bic
+)
+
+
+# RSS
+p_rss <- qplot(seq_along(reg_summary$rss), reg_summary$rss,
+      xlab = "Number of Variables", ylab = "RSS") +
+  geom_line()
+
+# Adjusted R^2
+pt_adjr2 <- which.max(reg_summary$adjr2)   # index of max feature
+p_adjr2  <- qplot(seq_along(reg_summary$adjr2), reg_summary$adjr2,
+                  xlab = "Number of Variables", ylab = "Adjusted RSq") +
+  geom_line() + 
+  geom_point(aes(x = pt_adjr2, y = reg_summary$adjr2[pt_adjr2]),
+             colour = "red", size = 3)
+# CP
+pt_cp <- which.min(reg_summary$cp)   # index of min feature
+p_cp  <- qplot(seq_along(reg_summary$cp), reg_summary$cp,
+               xlab = "Number of Variables", ylab = "Cp") +
+  geom_line() +
+  geom_point(aes(x = pt_cp, y = reg_summary$cp[pt_cp]),
+             colour = "red", size = 3)
+  
+
+pt_bic <- which.min(reg_summary$bic)
+p_bic  <- qplot(seq_along(reg_summary$bic), reg_summary$bic,
+                xlab = "Number of Variables", ylab = "BIC") +
+  geom_line() +
+  geom_point(aes(x = pt_bic, y = reg_summary$bic[pt_bic]),
+             colour = "red", size = 3)
+
+# All 4 plots stored in variable `reg_plots`
+# Now plot them in a grid
+gridExtra::grid.arrange(p_rss,
+                        p_adjr2,
+                        p_cp,
+                        p_bic, ncol = 2)
 ```
 
 
-The `leaps` package has a has a built in S3 plot method 
-for class `regsubsets` which can be used to display the
-selected variables for the best model for a 
+The `leaps` package has a (rather ugly) built in S3 plot
+method (sorry, no `ggplot`) for class `regsubsets` which can be 
+used to display the selected variables for the best model for a 
 given number of predictors, ranked according to $R^2$. See `?plot.regsubsets`.
 
 ```{r plot_subsets}
-par(mfrow = c(2, 2))
-plot(regfit.full, scale = "r2")
-plot(regfit.full, scale = "adjr2")
-plot(regfit.full, scale = "Cp")
-plot(regfit.full, scale = "bic")
-coef(regfit.full, 6)
-coef(regfit.full, 10)
+par(mfrow = c(1, 2))
+par(mgp = c(2, 0.75, 0), mar = c(3,4,3,1))
+plot(regfit_full, scale = "r2")
+plot(regfit_full, scale = "adjr2")
+plot(regfit_full, scale = "Cp")
+plot(regfit_full, scale = "bic")
+coef(regfit_full, 6)   # Look at top 6 features
+coef(regfit_full, 10)  # Look at top 10 features
 ```
 
 
 
 ## Forward and Backward Step-wise Selection
 ```{r stepwise_seln}
-regfit.fwd <- leaps::regsubsets(Salary ~ ., data = Hitters,
+regfit_fwd <- leaps::regsubsets(Salary ~ ., data = Hitters,
                                 nvmax = 19, method = "forward")
-summary(regfit.fwd)
+summary(regfit_fwd)
 #regfit.fwd[2]
 #regfit.fwd[[2]]
-regfit.bwd <- leaps::regsubsets(Salary ~ ., data = Hitters,
+regfit_bwd <- leaps::regsubsets(Salary ~ ., data = Hitters,
                                 nvmax = 19, method = "backward")
-summary(regfit.bwd)
+summary(regfit_bwd)
 
 # Compare the models selected by each approach
-coef(regfit.full, 7)
-coef(regfit.fwd, 7)
-coef(regfit.bwd, 7)
+coef(regfit_full, 7)
+coef(regfit_fwd, 7)
+coef(regfit_bwd, 7)
 ```
 
 
@@ -113,39 +157,47 @@ coef(regfit.bwd, 7)
 
 ```{r Choosing_models}
 set.seed(1)
-train <- sample(c(TRUE, FALSE), nrow(Hitters), rep = TRUE)
-head(train)
-test <- !train    # invert logical
-regfit.best <- leaps::regsubsets(Salary ~ . ,
-                                 data = Hitters[train, ],
+train_lgl <- sample(c(TRUE, FALSE), nrow(Hitters), replace = TRUE)
+test_lgl  <- !train_lgl    # invert logical
+head(train_lgl); head(test_lgl)
+regfit_best <- leaps::regsubsets(Salary ~ . ,
+                                 data = Hitters[train_lgl, ],
                                  nvmax = 19)
-test.mat <- model.matrix(Salary ~ ., data = Hitters[test,])
+test_mat <- model.matrix(Salary ~ ., data = Hitters[test_lgl, ])
 ?model.matrix
-test.mat
+as.tibble(test_mat)    # view as a `tibble` to save space
+```
 
-# Let's try to figure out what's going on in the loop below
-val.errors <- rep(NA,19)
-coefi <- coef(regfit.best, id = 1)
-test.mat[, names(coefi)]
-coefi
-test.mat[, names(coefi)]%*%coefi
-coefi <- coef(regfit.best, id = 2)
-test.mat[, names(coefi)]
-coefi
-test.mat[, names(coefi)]%*%coefi
+Let's try to figure out what's going on in the `purrr` 
+iteration loop below by stepping through the first two iterations:
 
-#
-for (i in 1:19) {
-  coefi <- coef(regfit.best, id = i)
-  test.mat[,names(coefi)]
-  #print(coefi)
-  pred <- test.mat[,names(coefi)]%*%coefi
-  #print(pred)
-  val.errors[i] <- mean((Hitters$Salary[test] - pred)^2)
-}
-val.errors
-which.min(val.errors)
-coef(regfit.best, 10)
+```{r dive_into_loop}
+# iter 1
+coefi <- coef(regfit_best, id = 1)
+test_mat[, names(coefi)] %>% head()
+coefi
+test_mat[, names(coefi)]%*%coefi %>% head()
+
+# iter 2
+coefi <- coef(regfit_best, id = 2)
+test_mat[, names(coefi)] %>% head()
+coefi
+test_mat[, names(coefi)]%*%coefi %>% head()
+```
+
+
+The `purrr` iteration that generates the test MSE for each size model:
+
+```{r the_loop}
+val_errors <- purrr::map_dbl(1:19, function(.i) {
+  coefi <- coef(regfit_best, id = .i)
+  pred  <- test_mat[, names(coefi)]%*%coefi
+  mean((Hitters$Salary[test_lgl] - pred)^2)
+})
+  
+val_errors
+which.min(val_errors)    # the 'best' model is one containing 10 predictors
+which.min(val_errors) %>% coef(regfit_best, .)   # with these coefficients
 ```
 
 
@@ -162,42 +214,64 @@ specific behavior for a given class object (first argument) they act on.
 predict.regsubsets <- function(object, newdata, id, ...) {
   form <- as.formula(object$call[[2]])
   #print(form)
-  mat   <- model.matrix(form, newdata)
-  coefi <-coef(object, id = id)
-  xvars <-names(coefi)
+  mat   <- stats::model.matrix(form, newdata)
+  coefi <- stats::coef(object, id = id)
+  xvars <- names(coefi)
   mat[, xvars]%*%coefi
 }
 ```
 
 ## Choosing Among Models: cross-validation
+
 ```{r cv}
-regfit.best <- leaps::regsubsets(Salary ~ ., data = Hitters, nvmax = 19)
-coef(regfit.best, 10)
+regfit_cv <- leaps::regsubsets(Salary ~ ., data = Hitters, nvmax = 19)
+coef(regfit_cv, 10)
+
+
+# k-fold cross validation
 k <- 10
 set.seed(1)
 folds <- sample(1:k, nrow(Hitters), replace = TRUE)
 folds
-cv.errors <- matrix(NA, k, 19, dimnames = list(NULL, paste(1:19)))
 
-# k-fold cross validation
-for (j in 1:k) {
-  best.fit <- leaps::regsubsets(Salary ~ .,
-                                data = Hitters[folds!=j, ],
-                                nvmax = 19)
-  # Loop over best models with 1 to 19 predictors
-  for (i in 1:19) {
-    pred <- predict(best.fit, Hitters[folds==j, ], id = i)
-    cv.errors[j, i] <- mean((Hitters$Salary[folds==j] - pred)^2)
-  }
+cv_errors <- list()     # pre-allocate an empty list
+# Loop required here for scoping reasons
+# so that it plays nice with our predict method
+# otherwise the `call` will not be correct
+for (fold in 1:k) {
+  fit <- leaps::regsubsets(Salary ~ .,
+                           data = Hitters[folds != fold, ],
+                           nvmax = 19)
+  purrr::map_dbl(1:19, function(.i) {
+    fold_data <- Hitters[folds == fold, ]     # subset only fold idx
+    pred <- predict(fit, fold_data, id = .i)  # this is our `predict`!
+    mean((fold_data$Salary - pred)^2)         # MSE
+  }) -> cv_errors[[fold]]    # RHS assignment! Can be cleaner code-wise
 }
 
-# Calculate the mean for each column; 19 variables
-mean.cv.errors <- apply(cv.errors, 2, mean)
-mean.cv.errors
-par(mfrow = c(1, 1))
-plot(mean.cv.errors, type = "b")
-reg.best <- leaps::regsubsets(Salary ~ . , data = Hitters, nvmax = 19)
-coef(reg.best, 11)
+# 19 values for each fold
+# 1 MSE per variable
+purrr::map_int(cv_errors, length)    # sanity check
+
+# Take the mean across the folds
+mean_cv_errors <- cv_errors %>%
+  data.frame() %>%        # convert to df for the `apply` call
+  apply(., 1, mean)       # folds are now the columns; mean across folds
+
+mean_cv_errors
+
+# Plot the MSE for all 19 variables (model sizes)
+pt_cv <- which.min(mean_cv_errors)
+ggplot2::qplot(seq_along(mean_cv_errors),
+               mean_cv_errors, ylab = "MSE",
+               xlab = "Number of Variables") +
+  geom_line() +
+  geom_point(aes(x = pt_cv, y = mean_cv_errors[pt_cv]),
+                 size = 3, colour = "red")
+
+# The 11 variable model has the lowest MSE
+leaps::regsubsets(Salary ~ ., data = Hitters, nvmax = 19) %>%
+  coef(pt_cv)
 ```
 
 
@@ -214,98 +288,143 @@ containing features (predictors) and a separate `y` variable
 for the `Response` (Salary).
 
 ```{r ridge_data}
-x <- model.matrix(Salary ~ ., Hitters)[, -1]
+x <- model.matrix(Salary ~ ., Hitters)[, -1]   # remove Intercept column
 head(x, 10)
-y <- Hitters$Salary
-print(y)
+y <- Hitters$Salary  # Salary is the Response variable we're predicting
+summary(y)           # S3 method for numerics
+y %>% data.frame() %>%
+  magrittr::set_names("Salary") %>%     # rename `y` for the plot
+  ggplot(aes(x = Salary)) +
+  geom_histogram(aes(y = ..density..), fill = 'gray', colour = 'black') +
+  geom_density(alpha = 0.2, fill = "blue")
 ```
+
 
 Now perform a sweep across the tuning parameter `lambda` using
 the `glmnet::glmnet` function.
 
 ```{r ridge_regression}
-# lambda = 10^{10} effectively reduces the model to the mean
-# lambda = 10^{-2} is effectively linear regression
+# lambda = 10^{10} effectively reduces the model to the mean; upper extreme
+# lambda = 10^{-2} is effectively linear regression; lower extreme
 grid <- 10^seq(10, -2, length = 100)
-print(grid)
+ggplot2::qplot(x = seq_along(grid), y = grid,
+               ylab = expression(lambda),
+               xlab = "") +
+  geom_line(colour = "blue")
 
-# Note: alpha is the elastic net parameter, alpha \in [0,1]
-#       alpha = 0 selects ridge regression; alpha = 1 selects lasso
-ridge.mod <- glmnet(x, y, alpha = 0, lambda = grid)
+# Note: 
+# alpha is the elastic net parameter, alpha in [0,1]
+# alpha = 0 selects ridge regression
+# alpha = 1 selects lasso
+ridge_model1 <- glmnet(x, y, alpha = 0, lambda = grid)
 
 # Matrix of coefficients for each value of penalty parameter
-dim(coef(ridge.mod))
-class(ridge.mod)
+dim(coef(ridge_model1))
+class(ridge_model1)
 
-# Select the 50th value of the penalty parameter
-ridge.mod$lambda[50]
-coef(ridge.mod)[, 50]
-sqrt(sum(coef(ridge.mod)[-1, 50]^2))
-sqrt(sum(coef(ridge.mod)[2:20, 50]^2))
-#
-ridge.mod$lambda[60]
-coef(ridge.mod)[, 60]
-sqrt(sum(coef(ridge.mod)[-1, 60]^2))
+# Select the 50th value of the penalty parameter lambda
+# It is also the 50th value of `grid` we defined up front
+ridge_model1$lambda[50]
+coef(ridge_model1)[, 50]
+sqrt(sum(coef(ridge_model1)[-1, 50]^2))
+sqrt(sum(coef(ridge_model1)[2:20, 50]^2))
 
-# Find coefficients for penalty parameter (lambda) = 50
-predict(ridge.mod, s = 50, type = "coefficients")[1:20, ]
-# x=50 is bracketed by the 69th and 70th penalties
-ridge.mod$lambda[69]
-coef(ridge.mod)[, 69]
-ridge.mod$lambda[70]
-coef(ridge.mod)[, 70]
+# Select the 60th value of the penalty parameter lambda
+# This value should be smaller as lambda decreases
+ridge_model1$lambda[60]
+coef(ridge_model1)[, 60]
+sqrt(sum(coef(ridge_model1)[-1, 60]^2))
+
+# Find coefficients for penalty parameter (lambda) = 50; `s = `
+predict(ridge_model1, s = 50, type = "coefficients")[1:20, ]
+
+# x = 50 is bracketed by the 69th and 70th penalties
+ridge_model1$lambda[69]
+coef(ridge_model1)[, 69]
+ridge_model1$lambda[70]
+coef(ridge_model1)[, 70]
 ```
 
 
 ## Ridge Regression II
+We now split the `Hitters` (now `x`) data set into a **training** and **test**
+set to get a better estimate of how the model might perform on samples it
+has not *"seen"* and/or trained on.
 
 ```{r ridge_regression2}
-# Create training and test sets
+# Create training and test sets as above
 set.seed(1)
-n      <- nrow(x)
-train  <- sample(1:n, n/2)
-test   <-(-train)
-y.test <- y[test]
+n      <- nrow(x)            # number of total samples
+train  <- sample(1:n, n/2)   # numeric indices; no replacement
+test   <- -train             # negate with -ve, when indexing row is removed
+y_test <- y[test]
 
-# Estimating the test error
-ridge.mod <- glmnet(x[train,], y[train],
-                    alpha = 0, lambda = grid,
-                    thresh = 1e-12)
-ridge.pred <- predict(ridge.mod, s = 4, newx = x[test,])
-mean((ridge.pred - y.test)^2)
+# Estimating the test error via `glmnet`
+ridge_model2 <- glmnet::glmnet(x[train, ], y[train],  # subset `x` into training set
+                               alpha  = 0,            # do ridge-regression
+                               lambda = grid,         # use same grid as above
+                               thresh = 1e-12)
+ridge_pred <- predict(ridge_model2,            # S3 glmnet predict function
+                      s = 4,                   # set lambda = 4
+                      newx = x[test, ])        # subset `x` into test set
+
+mean((ridge_pred - y_test)^2)                  # Calculate test MSE
 
 # Exploring limits: large lambda
 # Predicting using the mean of the training data
-mean((mean(y[train]) - y.test)^2)
+mean((mean(y[train]) - y_test)^2)
 
 # An extremely large penalty essentially reduces beta_1 to beta_p to be zero
 # i.e., the prediction becomes the mean for all predictors
-ridge.pred <- predict(ridge.mod, s = 1e10, newx = x[test, ])
-mean((ridge.pred - y.test)^2)
+ridge_pred2 <- predict(ridge_model2, s = 1e10, newx = x[test, ])
+mean((ridge_pred2 - y_test)^2)             # MSE
+
 
 # Exploring limits: small lambda
-ridge.pred <- predict(ridge.mod, s = 0, newx = x[test, ])
-mean((ridge.pred - y.test)^2)
-lm(y ~ x, subset = train)
-predict(ridge.mod, s = 0, type = "coefficients")[1:20, ]
+ridge_pred3 <- predict(ridge_model2,
+                       s = 0,             # lambda = 0; un-penalized; see `lm()`
+                       newx = x[test, ])  # subset to test set
+mean((ridge_pred3 - y_test)^2)            # calculate test MSE
+
+# Compare results with simple linear model
+# without penalty
+stats::lm(y ~ x, subset = train)      # better output for un-penalized model
+
+# Use type = 'coefficients' to return coeffs
+# Note: very close approximation to the linear model with least squares
+predict(ridge_model2, s = 0, type = "coefficients")[1:20, ]
 ```
 
-## Ridge Regression III
+
+
+## Ridge Regression III: cross-validation
+It is better to use cross-validation to estimate *best* lambda. Luckily, there
+is a build in function `glmnet::cv.glmnet` provided for this purpose.
+By default, `K = 10` cross-validation is performed.
 
 ```{r ridge_regression3}
-# V-fold cross validation (default nfold=10)
 set.seed(1)
-cv.out <- cv.glmnet(x[train, ], y[train], alpha = 0)
-plot(cv.out)
-bestlam <- cv.out$lambda.min
-bestlam
-#
-ridge.pred <- predict(ridge.mod, s = bestlam, newx = x[test, ])
-mean((ridge.pred - y.test)^2)
+ridge_cv <- cv.glmnet(x[train, ],  # subset training `predictor matrix`
+                      y[train],    # subset training `response vector`
+                      alpha = 0)   # ridge on training set
 
-# Fit on full data set
-fit <- glmnet(x, y, alpha = 0)
-predict(fit, type = "coefficients", s = bestlam)[1:20, ]
+# Plot MSE vs the lambda penalty sweep
+plot(ridge_cv)            # S3 plot method for class `cv.glmnet`
+
+# Store min lambda*
+# Compare to the plot ... remember to log-transform!
+lambda_star <- ridge_cv %>% purrr::pluck("lambda.min")
+lambda_star
+
+#
+ridge_pred4 <- predict(ridge_model2,       # model fit on training set only
+                       s = lambda_star,    # use lambda*
+                       newx = x[test, ])   # predict on test set only
+mean((ridge_pred4 - y_test)^2)             # calculate test MSE
+
+# Now that we know lambda*, fit on *full* data set
+full_fit_ridge <- glmnet::glmnet(x, y, alpha = 0)
+predict(full_fit_ridge, type = "coefficients", s = lambda_star)[1:20, ]
 ```
 
 
@@ -315,22 +434,38 @@ predict(fit, type = "coefficients", s = bestlam)[1:20, ]
 ## The Lasso
 
 ```{r lasso}
-lasso.mod <- glmnet(x[train, ], y[train], alpha = 1, lambda = grid)
+lasso_model <- glmnet::glmnet(x[train, ],  # subset training `predictor matrix` 
+                              y[train],    # subset training `response vector`
+                              alpha = 1,       # now alpha = 1; lasso
+                              lambda = grid)   # same lambda search grid
 
 # Plot coefficients as a function of penalty parameter
-plot(lasso.mod)
+# using built-in S3 plot method
+plot(lasso_model)
 
-# V-fold cross validation (default nfold=10)
+# Once again, use k-fold cross validation (default K = 10)
 set.seed(1)
-cv.out <- cv.glmnet(x[train, ], y[train], alpha = 1)
-plot(cv.out)
-bestlam    <- cv.out$lambda.min
-lasso.pred <- predict(lasso.mod, s = bestlam, newx = x[test, ])
-mean((lasso.pred - y.test)^2)
-#
-fit        <- glmnet(x, y, alpha = 1, lambda = grid)
-lasso.coef <- predict(fit, type = "coefficients", s = bestlam)[1:20, ]
-lasso.coef
-lasso.coef[lasso.coef != 0]
+lasso_cv <- glmnet::cv.glmnet(x[train, ], y[train], alpha = 1)
+
+# Plot CV output
+plot(lasso_cv)
+lambda_star2 <- lasso_cv %>%
+  purrr::pluck("lambda.min")
+lasso_pred   <- predict(lasso_model,        # training set fitted model
+                        s = lambda_star2,   # predict using lambda*
+                        newx = x[test, ])   # predict on test set
+mean((lasso_pred - y_test)^2)               # calculate test MSE
+
+# Now that we know lambda*, fit on *full* data set
+full_fit_lasso <- glmnet(x, y, alpha = 1, lambda = grid)
+lasso_coeffs   <- predict(full_fit_lasso,        # glmnet fit on full data
+                         type = "coefficients",  # return betas; not predictions
+                         s = lambda_star2)[1:20, ]
+lasso_coeffs
+
+# Some Betas (coeffs) are zero as expected
+# Remove them to get a better look at the model
+lasso_coeffs %>%
+  magrittr::extract(. != 0)
 ```
  
