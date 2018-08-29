@@ -1,5 +1,5 @@
 ---
-title: "Data Wrangling in R"
+title: "Data Wrangling in the Tidyverse"
 author: "Simon Tavener & Stu Field"
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
@@ -19,19 +19,22 @@ fontsize: 12pt
 # Setup & Configuration
 
 * The code below will load the libraries you will need for this tutorial.
-```{r setup, results = 'hide'}
+If you do not have one, please install with `install.packages("pkg")`:
+```{r setup, message = FALSE}
+options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 options(width = 100)
-library(tibble)                         # special type of data frame
-library(magrittr)                       # pipes
-suppressMessages(library(dplyr))        # data manipulation
-library(nycflights13)                   # toy data set
-library(ggplot2)                        # pretty plots
-library(reshape2)                       # melt/reshape data frames
-suppressMessages(library(lubridate))    # working with dates/times
+library(tibble)           # special type of data frame
+library(magrittr)         # pipes
+library(dplyr)            # data manipulation
+library(ggplot2)          # pretty plots
+library(tidyr)            # reshape data frames; mostly for ggplots
+library(lubridate)        # working with dates/times
+library(nycflights13)     # data set of flight times, departures, and arrivals
 ```
+
 * The data we will be using today is available via the `nycflights13` package.
 * R environment:
-    +  Now is a good time to check that your version of R is up-to-date. If you are not running version 3.2.3 or later it is time to update. We will use a function from the `devtools` package to check your session info:
+    +  Now is a good time to check that your version of R is up-to-date. If you are not running version R >= 3.2.3 it is time to update. Use a function from the `devtools` package to check your session info:
 ```{r, eval = FALSE}
 devtools::session_info()
 ```
@@ -210,7 +213,7 @@ str(flights)
 ```
 
 
-## Look at full "tibble"" data frame
+## Look at full `tibble` data frame
 ```{r flights_tibble}
 flights
 ```
@@ -393,20 +396,20 @@ thm <- theme_bw() +
     plot.background = element_rect(fill = "transparent", colour = NA),
     legend.position = "top",
     legend.background = element_rect(fill = "transparent", colour = NA),
-    legend.key = element_rect(fill = "transparent", colour = NA)
+    legend.key = element_rect(fill = "transparent", colour = NA),
+    plot.title = element_text(hjust = 0.5)
   )
 theme_set(thm)
 
-df <- reshape2::melt(iris, id.vars = "Species", variable.name = "Feature",
-                     value.name = "cm") %>%
-  mutate(Feature=gsub("\\.", " ", Feature))
-
-ggplot(df, aes(y = cm, x = Species, fill = Species)) +
+iris %>% 
+  tidyr::gather(key = "Feature", value = "cm", -Species) %>%
+  mutate(Feature = gsub("\\.", " ", Feature)) %>% 
+  ggplot(aes(y = cm, x = Species, fill = Species)) +
   geom_boxplot(color = "#1F3552", alpha = 0.75, size = 0.5) +
   scale_x_discrete(name = "Species") +
   ggtitle("Overall Title") +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  facet_wrap(~Feature, ncol = 2) 
+  facet_wrap(~Feature, ncol = 2) +
+  NULL
 ```
 
 
@@ -448,7 +451,6 @@ ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
     6. Create a time series plot of each of the legacy carriers average departure delay by day and origin airport. It should look something like this:
 
 ```{r flights_ggplot, echo = FALSE}
-
 flights %>%
   filter(carrier == c("AA", "UA", "DL", "US")) %>%
   group_by(carrier, day, origin) %>%
@@ -641,17 +643,26 @@ Variable defintions in the `weather` dataset:
 | `visib`      | Visibility in miles                         |
 
 
+
 <!--
-* tailnum - Tail number
-* year - Year manufactured
-* type - Type of plane
-* manufacturer - Manufacturer
-* model - Model
-* engines - Number of engines
-* seats - Number of seats
-* speed - Average cruising speed in mph
-* engine - Type of engine
+Variable defintions in the `flights` dataset:
+
+|   Variable     |   Description                     |
+| -------------- | --------------------------------- |
+| `tailnum`      | Tail number                       |
+| `year`         | Year manufactured                 |
+| `type`         | Type of plane                     |
+| `manufacturer` | Manufacturer                      |
+| `model`        | Model                             |
+| `engines`      | Number of engines                 |
+| `seats`        | Number of seats                   |
+| `speed`        | Average cruising speed in mph     |
+| `engine`       | Type of engine                    |
 -->
+
+
+--------------------------
+
 
 ```{r}
 intersect(names(weather), names(flights))
@@ -673,12 +684,13 @@ Let's make a `ggplot` of the delay time vs. visibility:
 ```{r}
 flightsw %>%
   ggplot(aes(x = visib, y = dep_delay)) +
-  geom_point()
+  geom_jitter(alpha = 0.5) +    # shake up the points a bit for better viewing
+  NULL
 ```
 
 
 
-Let's take a closer look at the dependent variable: visibility:
+Let's take a closer look at the dependent variable -> visibility:
 
 ```{r}
 flightsw %>%
@@ -693,8 +705,10 @@ Wow! The vast majority of flights are under clear skies with `> 10` miles visibi
 ```{r}
 flightsw %>%
   ggplot(aes(x = visib, y = dep_delay)) +
-  geom_jitter(shape = 21, color = "blue", fill = "gray", size = 1.5, width = 0.2) +
-  geom_smooth(color = 'red')
+  geom_jitter(shape = 21, color = "blue", fill = "gray",
+              size = 1.5, width = 0.2, alpha = 0.5) +
+  geom_smooth(color = "red") +
+  NULL
 ```
 
 
@@ -708,7 +722,8 @@ flightsw %>%
   geom_boxplot(fill = "blue", color = "gray") +
   coord_trans(y = "log10") +
   xlab("Visibility") +
-  ylab("Departure Delay")
+  ylab("Departure Delay") +
+  NULL
 ```
 
 

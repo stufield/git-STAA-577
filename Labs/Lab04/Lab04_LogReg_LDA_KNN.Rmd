@@ -14,7 +14,10 @@ tables: yes
 fontsize: 12pt
 ---
 
-```{r setup, include = FALSE}
+
+# Setup
+
+```{r setup, message = FALSE}
 options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 library(magrittr)     # pipes
 library(tibble)       # tibbles
@@ -28,7 +31,12 @@ library(ISLR)         # Smarket data set
 ```
 
 
-# The S&P Stock Market Data `Smarket`
+
+-----------------------------
+
+
+
+# The `Smarket` Data Set: S & P Stock Market
 ```{r Stock_Market_Data, error = TRUE}
 class(Smarket)                           # currently data frame
 Smarket %<>% as.tibble()                 # convert to `tibble` object
@@ -43,7 +51,7 @@ class(Smarket$Direction)                 # Factor
 cor(dplyr::select(Smarket, -Direction))  # remove 'Direction' and retry
 Smarket %>%
   ggplot(aes(x = 1:length(Volume), y = Volume)) +   # plot `Volume` over time
-  geom_point() +                                    # points
+  geom_point(alpha = 0.5) +                         # points
   xlab("Time") +
   geom_smooth()                                     # smooth fit
 ```
@@ -53,8 +61,8 @@ Smarket %>%
 
 # Logistic Regression I
 ```{r Logistic_regression}
-glm.fit <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 +
-               Lag5 + Volume, data = Smarket, family = "binomial")
+glm.fit <- stats::glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 +
+                      Lag5 + Volume, data = Smarket, family = "binomial")
 class(glm.fit)
 summary(glm.fit)       # Coefficients for each feature
 coef(glm.fit)          # Statistical summary for each feature

@@ -14,7 +14,9 @@ tables: yes
 fontsize: 12pt
 ---
 
-```{r setup, include = FALSE}
+# Setup
+
+```{r setup, message = FALSE}
 options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 library(magrittr)     # pipes
 library(tibble)       # tibbles
@@ -25,8 +27,16 @@ library(ggplot2)      # tidy plotting
 library(ISLR)         # Hitters data set
 library(leaps)        # step-wise model selection
 library(gridExtra)    # arranging ggplots into grids
-library(glmnet)
+library(glmnet)       # logistic regression models
 ```
+
+
+
+-----------------------------
+
+
+
+# The `Hitters` Data Set
 
 ```{r data}
 # Explore data set

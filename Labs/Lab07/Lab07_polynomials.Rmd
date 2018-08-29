@@ -12,6 +12,8 @@ output:
 ratio: '9:16'
 tables: yes
 fontsize: 12pt
+editor_options: 
+  chunk_output_type: inline
 ---
 
 
@@ -22,18 +24,24 @@ library(magrittr)     # pipes
 library(tibble)       # tibbles
 library(dplyr)        # data wrangling
 library(purrr)        # iteration
+library(broom)        # summarizing models consistently
 library(ggplot2)      # tidy plotting
 library(ISLR)         # Wage data set
-library(gridExtra)    # arranging ggplots into grids
 ```
 
 
 ```{r data}
-attach(Wage)
-#fix(Wage)
-dim(Wage)
-agelims<-range(age)
-age.grid<-seq(from=agelims[1],to=agelims[2])
+Wage %<>% as.tibble()     # convert to tibble
+names(Wage)               # See variables available
+Wage                      # look at tibble to see data
+age      <- Wage$age      # make variable globally available downstream
+wage     <- Wage$wage     # make variable globally available downstream
+agelims  <- range(age)
+age_grid <- seq(from = agelims[1], to = agelims[2])  # sequence from min to max
+wage %>%                  # plot the distribution of the primary response variable of this lab
+  data.frame() %>%        # convert to df for ggplot
+  ggplot2::ggplot(aes(x = wage)) +
+    ggplot2::geom_histogram(binwidth = 5)
 ```
 
 
@@ -43,42 +51,59 @@ age.grid<-seq(from=agelims[1],to=agelims[2])
 
 ```{r polynomial_regression}
 # Regression using a basis of orthogonal polynomials of degree 4
-fit<-lm(wage~poly(age,4),data=Wage)
-coef(summary(fit))
-#
+fit <- stats::lm(wage ~ stats::poly(age, 4), data = Wage)
+broom::tidy(fit)
+
 # Fit using a basis of monomials up to degree 4
-fit2<-lm(wage~poly(age,4,raw=T),data=Wage)
-coef(summary(fit2))
-#
-# Are these the same thing?
-preds<-predict(fit,newdata=list(age=age.grid),se=TRUE)
-preds2<-predict(fit2,newdata=list(age=age.grid),se=TRUE)
-max(abs(preds$fit-preds2$fit))
+fit2 <- stats::lm(wage ~ stats::poly(age, 4, raw = TRUE), data = Wage)
+broom::tidy(fit2)
+
+# Are these the same?
+preds  <- predict(fit, newdata = data.frame(age = age_grid), se = TRUE)
+preds2 <- predict(fit2, newdata = data.frame(age = age_grid), se = TRUE)
+
+# not *identical* but VERY close
+identical(preds$fit, preds2$fit)       # identical() is a bit too strict
+all.equal(preds$fit, preds2$fit, tolerance = 1e-10)   # use all.equal() with a tolerance
+```
 
 
-#
-# Two further ways of doing the same thing
-#
-fit2a<-lm(wage~age+I(age^2)+I(age^3)+I(age^4),data=Wage)
-coef(fit2a)
-#
-fit2b<-lm(wage~cbind(age,age^2,age^3,age^4),data=Wage)
-coef(fit2b)
+Here are two further ways of doing the same thing:
+
+```{r more_examples}
+fit2a <- stats::lm(wage ~ age + I(age^2) + I(age^3) + I(age^4), data = Wage)
+fit2b <- stats::lm(wage ~ cbind(age, age^2, age^3, age^4), data = Wage)
+all.equal(coef(fit2a), coef(fit2b), check.attributes = FALSE)
+```
 
 
-#
-# Plotting with 2 standard error bands
-#
-agelims<-range(age)
-age.grid<-seq(from=agelims[1],to=agelims[2])
-preds<-predict(fit,newdata=list(age=age.grid),se=TRUE)
-se.bands<-cbind(preds$fit+2*preds$se.fit,preds$fit-2*preds$se.fit)
-#
-par(mfrow=c(1,2),mar=c(4.5,4.5,1,1),oma=c(0,0,4,0))
-plot(age,wage,xlim=agelims,cex=.5,col="darkgrey")
-title("Degree-4 Polynomial",outer=T)
-lines(age.grid,preds$fit,lwd=2,col="blue")
-matlines(age.grid,se.bands,lwd=1,col="blue",lty=3)
+
+## Plot Age vs. Wage
+Plotting with 2 standard error bands:
+
+```{r plot_SEs}
+fit_preds <- predict(fit, newdata = data.frame(age = age_grid), se = TRUE)
+up        <- fit_preds$fit + 2 * fit_preds$se.fit
+lo        <- fit_preds$fit - 2 * fit_preds$se.fit
+
+# make df for ggplot
+df_fit <- data.frame(     fit = fit_preds$fit,
+                     age_grid = age_grid,
+                           up = up,
+                           lo = lo) 
+
+# pass `x` and `y` as df to ggplot
+data.frame(age = age, wage = wage) %>%
+  ggplot(aes(x = age, y = wage)) +
+  geom_point(alpha = 0.25) +
+  labs(title = "Degree-4 Polynomial") +  
+  geom_line(data = df_fit, aes(x = age_grid, y = fit), col = "blue") +
+  geom_line(data = df_fit, aes(x = age_grid, y = up),
+            col = "red", linetype = "dashed") +
+  geom_line(data = df_fit, aes(x = age_grid, y = lo),
+            col = "red", linetype = "dashed") +
+  NULL        # neat trick that allows commenting layer lines above 
+              # without having to manage the `+` signs between layers
 ```
 
 
@@ -86,31 +111,42 @@ matlines(age.grid,se.bands,lwd=1,col="blue",lty=3)
 
 ## Analysis of Variance I
 
+Use ANOVA to estimate appropriate degree of polynomial (F-statistic)
+**Note**: the models are *nested*.
+
+
 ```{r AoV1}
-# ANOVA to estimate appropriate degree of polynomial (F-statistic)
-# (Note the models are nested)
-fit.1<-lm(wage~age,data=Wage)
-fit.2<-lm(wage~poly(age,2),data=Wage)
-fit.3<-lm(wage~poly(age,3),data=Wage)
-fit.4<-lm(wage~poly(age,4),data=Wage)
-fit.5<-lm(wage~poly(age,5),data=Wage)
-anova(fit.1,fit.2,fit.3,fit.4,fit.5)
-#
+fit_1 <- stats::lm(wage ~ age, data = Wage)
+fit_2 <- stats::lm(wage ~ poly(age, 2), data = Wage)
+fit_3 <- stats::lm(wage ~ poly(age, 3), data = Wage)
+fit_4 <- stats::lm(wage ~ poly(age, 4), data = Wage)
+fit_5 <- stats::lm(wage ~ poly(age, 5), data = Wage)
+anova(fit_1, fit_2, fit_3, fit_4, fit_5)
+
 # Compare p-values (t-statistic) for coefficents of quintic fit
-coef(summary(fit.5))
-(-11.983)^2
+sumry <- broom::tidy(fit_5)
+sumry
+
+sumry %>%
+  purrr::pluck("statistic") %>%    # pull out the `statistic` column
+  magrittr::extract(3) %>%         # extract the 3rd entry
+  magrittr::raise_to_power(2)      # Squared; plays nice with %>% operator
 ```
+
+
 
 ## Analysis of Variance II
 
 ```{r AoV2}
-#
 # Perform analysis of variance to determine model
-fit.1<-lm(wage~education+age,data=Wage)
-fit.2<-lm(wage~education+poly(age,2),data=Wage)
-fit.3<-lm(wage~education+poly(age,3),data=Wage)
-anova(fit.1,fit.2,fit.3)
+fit_6 <- stats::lm(wage ~ education + age, data = Wage)
+fit_7 <- stats::lm(wage ~ education + poly(age, 2), data = Wage)
+fit_8 <- stats::lm(wage ~ education + poly(age, 3), data = Wage)
+anova(fit_6, fit_7, fit_8)
 ```
+
+
+
 
 ---------------------------
 
@@ -119,26 +155,44 @@ anova(fit.1,fit.2,fit.3)
 
 # Polynomial Logistic Regression
 
-
-
-
 ```{r polynomial_logistic_regression}
-fit<-glm(I(wage>250)~poly(age,4),data=Wage,family=binomial)
-preds<-predict(fit,newdata=list(age=age.grid),se=T)
-pfit<-exp(preds$fit)/(1+exp(preds$fit))
-se.bands.logit = cbind(preds$fit+2*preds$se.fit, preds$fit-2*preds$se.fit)
-se.bands <- exp(se.bands.logit)/(1+exp(se.bands.logit))
-#
-preds<-predict(fit,newdata=list(age=age.grid),type="response",se=T)
-plot(age,I(wage>250),xlim=agelims,type="n",ylim=c(0,.2))
-points(jitter(age), I((wage>250)/5),cex=.5,pch="|",col="darkgrey")
-lines(age.grid,pfit,lwd=2, col="blue")
-matlines(age.grid,se.bands,lwd=1,col="blue",lty=3)
-#
-table(cut(age,4))
-fit<-lm(wage~cut(age,4),data=Wage)
-coef(summary(fit))
+polyLRfit   <- stats::glm(I(wage > 250) ~ poly(age, 4),
+                          data = Wage, family = "binomial")
+LRpreds <- predict(polyLRfit, newdata = data.frame(age = age_grid), se = TRUE)
+upper   <- LRpreds$fit + 2 * LRpreds$se.fit        # logit space
+lower   <- LRpreds$fit - 2 * LRpreds$se.fit        # logit space
+
+# convert to linear space and df
+lr_fit <- data.frame(
+  age   = age_grid,
+  pfit  = exp(LRpreds$fit) / (1 + exp(LRpreds$fit)),
+  upper = exp(upper) / (1 + exp(upper)),
+  lower = exp(lower) / (1 + exp(lower))
+  ) %>% 
+  tibble::as.tibble()
+
+# STU: check on this; why is this here? doesn't do anything
+preds <- predict(polyLRfit, newdata = data.frame(age = age_grid),
+                 type = "response", se = TRUE)
+
+# pass `x` and `y` as df to ggplot
+data.frame(age = age, y = I(wage > 250)/5) %>%
+  ggplot(aes(x = age, y = y)) +
+  geom_point(alpha = 0.25, size = 2.5) +
+  #geom_jitter(height = 0) + # obscure binning effect; no vertical jitter
+  ylim(c(0, 0.22)) +
+  geom_line(data = lr_fit, aes(x = age, y = pfit), col = "blue") +
+  labs(title = "Polynomial Logistic Regression with SE",
+       y = "I(wage > 250)") +  
+  geom_line(data = lr_fit, aes(x = age, y = upper),
+            col = "red", linetype = "dashed") +
+  geom_line(data = lr_fit, aes(x = age, y = lower),
+            col = "red", linetype = "dashed") +
+  NULL
+
+table(cut(age, 4))     # get no. obs per bin if split age into 4 groups
+
+stats::lm(wage ~ cut(age, 4), data = Wage) %>% 
+  summary() %>% 
+  coef()
 ```
-
-
-

@@ -21,60 +21,117 @@ options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 library(magrittr)     # pipes
 library(tibble)       # tibbles
 library(dplyr)        # data wrangling
-library(boot)         # for `cv.glm`
 library(purrr)        # iteration
 library(ggplot2)      # tidy plotting
 library(ISLR)         # Wage data set
 library(splines)      # fitting splines
+library(gam)          # General Additive Models
 ```
 
+
+
 ```{r data}
-#fix(Wage)
-dim(Wage)
-agelims<-range(age)
-age.grid<-seq(from=agelims[1],to=agelims[2])
+Wage %<>% as.tibble()     # convert to tibble
+names(Wage)               # See variables available
+Wage                      # look at tibble to see data
+age      <- Wage$age      # make variable globally available downstream
+wage     <- Wage$wage     # make variable globally available downstream
+agelims  <- range(age)
+age_grid <- seq(from = agelims[1], to = agelims[2])  # sequence from min to max
+wage %>%                  # plot the distribution of the primary response variable of this lab
+  data.frame() %>%
+  ggplot2::ggplot(aes(x = wage)) +
+  geom_histogram(binwidth = 5)
 ```
 
 # Splines
+## B-splines
+Fit b-spline (by default a cubic spline) and plot spline +/- 2*standard
+error bounds:
 
 ```{r splines}
-# Fit b-spline (by default a cubic spline) and plot spline + 2*standard error bounds
-fit<-lm(wage~bs(age,knots=c(25,40,60)),data=Wage)
-pred<-predict(fit,newdata=list(age=age.grid),se=T)
-plot(age,wage,col="gray")
-lines(age.grid,pred$fit,lwd=2)
-lines(age.grid,pred$fit+2*pred$se,lty="dashed")
-lines(age.grid,pred$fit-2*pred$se,lty="dashed")
+b_spline_fit <- stats::lm(wage ~ splines::bs(age, knots = c(25, 40, 60)),
+                          data = Wage)
+bs_pred      <- predict(b_spline_fit,
+                        newdata = data.frame(age = age_grid),
+                        se = TRUE)
 
-# df=(number of degrees of freedom) locates knots based on uniform percentiles of the data
-dim(bs(age,knots=c(25,40,60)))
-dim(bs(age,df=6))
-attr(bs(age,df=6),"knots")
+# df = (number of degrees of freedom) locates knots 
+# based on uniform percentiles of the data
+dim(bs(age, knots = c(25, 40, 60)))
+dim(bs(age, df = 6))
+attr(bs(age, df = 6), "knots")
 
-# Fit a natural spline with four dof
-fit2<-lm(wage~ns(age,df=4),data=Wage)
-pred2<-predict(fit2,newdata=list(age=age.grid),se=T)
-lines(age.grid, pred2$fit,col="red",lwd=2)
+# Fit a natural spline with df = 4
+ns_spline_fit  <- stats::lm(wage ~ splines::ns(age, df = 4), data = Wage)
+ns_pred        <- predict(ns_spline_fit,
+                          newdata = data.frame(age = age_grid),
+                          se = TRUE)
 ```
+
+
+Calculate predicted values and standard errors (se), then collect
+into a data frame for plotting with `ggplot`:
+```{r plot_fitted_splines}
+gg_df <- data.frame(      # gather relevant vectors into a data frame
+  age_grid = age_grid,
+  bs_fit   = bs_pred$fit,
+  ns_fit   = ns_pred$fit
+  ) %>% 
+  dplyr::mutate(bs_upper = bs_fit + 2 * bs_pred$se.fit,  # calc 2se
+                bs_lower = bs_fit - 2 * bs_pred$se.fit) %>%  # calc 2se
+  tibble::as.tibble()
+
+gg_df    # quickly view the fitted plotting data for lines
+
+# pass full `x` and `y` data as df to ggplot
+data.frame(age = age, wage = wage) %>%
+  ggplot(aes(x = age, y = wage)) +
+  geom_point(alpha = 0.25) +
+  geom_line(data = gg_df, aes(x = age_grid, y = bs_fit), col = "blue") +
+  geom_line(data = gg_df, aes(x = age_grid, y = bs_upper),
+            col = "red", linetype = "dashed") +
+  geom_line(data = gg_df, aes(x = age_grid, y = bs_lower),
+            col = "red", linetype = "dashed") +
+  geom_line(data = gg_df, aes(x = age_grid, y = ns_fit), col = "black") +
+  NULL
+```
+
 
 ------------------------
 
 
-# Smoothing Splines
+## Smoothing Splines
   
 ```{r smoothing_splines}
 # Fit a smoothing spline
-plot(age,wage,xlim=agelims,cex=.5,col="darkgrey")
-title("Smoothing Spline")
-fit<-smooth.spline(age,wage,df=16)
+smooth_fit <- stats::smooth.spline(age, wage, df = 16)
 
-# Select level of smoothness by cross validation
+# Select level of `smoothness` by cross-validation
+smooth_fit_cv <- stats::smooth.spline(age, wage, cv = TRUE)
+smooth_fit_cv$df     # ~7 degrees of freedom for the final spline
 
-fit2<-smooth.spline(age,wage,cv=TRUE)
-fit2$df
-lines(fit,col="red",lwd=2)
-lines(fit2,col="blue",lwd=2)
-legend("topright", legend=c("16 DF","6.8 DF"),col=c("red","blue"),lty=1,lwd=2,cex=.8)
+# create a new reorganized df of fitted values for plotting below
+smooth_df <- data.frame(
+  x         = smooth_fit$x,
+  smooth    = smooth_fit$y,
+  smooth_cv = smooth_fit_cv$y
+  ) %>% 
+  tidyr::gather(key = "fit", value = "predicted", -x) %>% 
+  tibble::as.tibble()
+
+smooth_df    # quickly view the plotting data
+
+full_df <- data.frame(age = age, wage = wage)
+
+full_df %>% 
+  ggplot(aes(x = age, y = wage)) +
+  geom_point(alpha = 0.25) +
+  ggtitle("Smoothing Spline") +
+  geom_line(data = smooth_df, aes(x = x, y = predicted, colour = fit)) +
+  scale_colour_manual(values = c("red", "blue"), name = "") +
+  theme(legend.position = "top") +
+  NULL
 ```
 
 --------------------------
@@ -82,27 +139,67 @@ legend("topright", legend=c("16 DF","6.8 DF"),col=c("red","blue"),lty=1,lwd=2,ce
 
 
 
-# General Additive Models
+# General Additive Models (GAMs)
+## Fitting and plotting
+Sum of two natural splines and a linear function:
 
-```{r GAMs}
-# Sum of two natural splines and a linear function
-gam1<-lm(wage~ns(year,4)+ns(age,5)+education,data=Wage)
-library(gam)
+```{r GAM_fit_plot, warning = FALSE, fig.height = 9/2.5, fig.width = 9}
+# Fit a GAM using natural spline (`splines::ns`)
+gam_ns <- stats::lm(wage ~ splines::ns(year, 4) + splines::ns(age, 5) + education,
+                    data = Wage)
 
+# Fit GAM using smoothing spline (`gam::s`)
 # Sum of two splines and a linear function
-gam.m3<-gam(wage~s(year,4)+s(age,5)+education,data=Wage)
-par(mfrow=c(1,3))
-plot(gam.m3, se=TRUE,col="blue")
-plot(gam1, se=TRUE, col="red")
+gam_m3 <- gam::gam(wage ~ s(year, 4) + s(age, 5) + education,
+                   data = Wage)
+
+# There is a S3 method for the `plot` generic
+# for objects of class `Gam`
+# We'll make use of it here in lieu of developing our own `ggplot`
+# Exercise: generate your own plot method in `ggplot`?
+par(mfrow = c(1, 3))
+plot(gam_m3, se = TRUE, col = "navy")
+
+class(gam_ns)     # `gam_ns` is actually a `lm` object, but the `Gam` method recognizes it
+
+# but we have to call the S3 method explicitly
+plot.Gam(gam_ns, se = TRUE, col = "red")
 ```
 
-```{r GAMs, eval=TRUE}
-# Construct a two new models and compare using ANOVA
-gam.m1<-gam(wage~s(age,5)+education,data=Wage)
-gam.m2<-gam(wage~year+s(age,5)+education,data=Wage)
-anova(gam.m1,gam.m2,gam.m3,test="F")
-summary(gam.m3)
-preds<-predict(gam.m2,newdata=Wage)
-preds
-```
 
+
+## Compare, summarize, and predict
+Fit two additional models and compare to the original `gam_m3` using ANOVA.
+The models are:
+
+  * **gam_m1**: excludes `year` as covariate
+  * **gam_m2**: includes `year` as a *linear* covariate
+  * **gam_m3**: includes `year` as a *non-linear* spline function (`df = 4`)
+
+```{r GAMs_compare_summarize, warning = FALSE}
+gam_m1 <- gam::gam(wage ~ s(age, 5) + education, data = Wage)
+gam_m2 <- gam::gam(wage ~ year + s(age, 5) + education, data = Wage)
+anova(gam_m1, gam_m2, gam_m3, test = "F")
+
+# Based on the ANOVA, `gam_m2` is preferred
+# Use `summary` generic to view `gam_m3`
+# THERE IS SOMETHING WRONG HERE; CANNOT REPRODUCE THE
+# VALUES IN THE TEXT BECAUSE THE SUMMARY METHOD HAS CHANGED
+# ALSO, THEY SAY M2 IS PREFERRED, THEN PROCEED TO SUMMARIZE M3, WHY?
+summary(gam_m3)
+
+# Don't forget about `broom::tidy` 
+# Easily and consistently summarize model output
+broom::tidy(gam_m3)
+
+# Use the built-in S3 `Gam` method to the `predict` generic
+# to make predictions on the training set & calc MSE
+# The `predict()` generic lives in stats pkg
+# It is not necessary to select the model covariates;
+# it will happen internally inside `predict`
+# But it can be a good practice anyhow, to ensure you're not accidentally cheating
+# Below use `dplyr::select` to keep only the predictors in the "new data"
+pred_wage <- predict(gam_m2, newdata = dplyr::select(Wage, year, age, education))  
+mse   <- mean((wage - pred_wage)^2)   # calculate MSE
+mse
+```

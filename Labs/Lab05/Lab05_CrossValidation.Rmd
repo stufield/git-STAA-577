@@ -14,7 +14,9 @@ tables: yes
 fontsize: 12pt
 ---
 
-```{r setup, include = FALSE}
+# Setup
+
+```{r setup, messagel = FALSE}
 options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 library(magrittr)     # pipes
 library(tibble)       # tibbles
@@ -26,7 +28,10 @@ library(ISLR)         # Auto data set
 ```
 
 
-# Data Setup and Explore
+---------------------------
+
+
+# The `Auto` Data Set
 ```{r data, include = TRUE}
 Auto %<>% as.tibble()
 class(Auto)      # confirm now a tibble
@@ -34,7 +39,7 @@ names(Auto)      # which variables do we have?
 Auto             # look at the top 10
 Auto %>%         # Plot hp vs mpg
   ggplot(aes(x = horsepower, y = mpg)) +  # the relationship of this Lab
-  geom_point() +                          # do scatter plot
+  geom_point(alpha = 0.5) +               # do scatter plot
   geom_smooth(method = 'loess')           # fit a polynomial smoothing function
 ```
 
