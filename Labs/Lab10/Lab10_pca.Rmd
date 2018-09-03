@@ -1,0 +1,241 @@
+---
+title: 'STAA 577: Laboratory Ten </br> `tidyverse` version'
+author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
+date: "`r format(Sys.Date(), '%e %B %Y')`"
+output:
+  html_notebook: 
+    code_folding: show
+    number_sections: yes
+    toc: yes
+    toc_float:
+      collapsed: no
+ratio: '9:16'
+tables: yes
+fontsize: 12pt
+editor_options: 
+  chunk_output_type: inline
+---
+
+
+# Setup
+
+```{r setup, message = FALSE, warning = FALSE}
+options(warnPartialMatchArgs = FALSE)  # don't want these warnings
+library(magrittr)     # pipes
+library(tibble)       # tibbles
+library(dplyr)        # data wrangling
+library(purrr)        # iteration
+library(yardstick)    # classification performance measures
+library(ggplot2)      # tidy plotting
+library(ISLR)         # The `Carseats` data set
+library(e1071)        # package for SVMs (but also naive Bayes)
+```
+
+
+
+-----------------------------
+
+
+
+# Principal Component Analysis (PCA)
+
+```{r PCA, fig.width = 7, fig.height = 7}
+# USArrests (sadly) is part of the base R package
+# 50 rows and four columns
+dim(USArrests)
+states <- row.names(USArrests)
+states
+names(USArrests)
+apply(USArrests, 2, mean)
+apply(USArrests, 2, var)
+
+# Scale columns (variables) to have mean zero AND variance 1
+pr.out <- stats::prcomp(USArrests, scale = TRUE)
+
+# Center and scale correspond to means and standard deviations for scaling
+names(pr.out)
+
+pr.out$center
+pr.out$scale
+
+# The rotation matrix is the right singular vectors
+pr.out$rotation
+
+dim(pr.out$x)
+biplot(pr.out, scale = 0)
+pr.out$rotation <- -pr.out$rotation
+pr.out$x <- -pr.out$x
+biplot(pr.out, scale = 0)
+```
+
+
+
+```{r singular_vals, fig.width = 8}
+# Singular values
+pr.out$sdev
+pr.var <- pr.out$sdev^2
+pr.var
+pve <- pr.var / sum(pr.var)
+pve
+
+v1 <- ggplot2::qplot(x = seq_along(pve),  # convenience wrapper `qqplot()`
+                     y = pve) +           # allows plotting 2 vectors w/o data.frame
+  geom_point(alpha = 0.9, colour = "navy", size = 2.5) +
+  geom_line(colour = "navy", size = 1) +
+  labs(title = "Proportion of Variance explained by\n Each Principal Component",
+       x = "Principal Component",
+       y = "Proportion of Variance Explained") +
+  lims(y = c(0, 1)) +                                # set y-limits
+  theme(plot.title = element_text(hjust = 0.5)) +    # center main title
+  NULL
+
+v2 <- ggplot2::qplot(x = seq_along(pve),
+                     y = cumsum(pve)) +   # cumulative sum
+  geom_point(alpha = 0.9, colour = "navy", size = 2.5) +
+  geom_line(colour = "navy", size = 1) +
+  labs(title = "Cumulative Proportion of \nVariance Explained",
+       x = "Principal Component",
+       y = "Cumulative Proportion of Variance Explained") +
+  lims(y = c(0, 1)) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  NULL
+
+gridExtra::grid.arrange(v1, v2, ncol = 2)
+
+```
+
+
+
+
+--------------------------
+
+
+
+
+# K-means Clustering
+
+```{r k_means, fig.width = 11, fig.height = 5}
+# Simulate some data
+set.seed(2)
+clust_data <- matrix(stats::rnorm(50 * 2), ncol = 2) %>% 
+  data.frame() %>% 
+  magrittr::set_names(c("F1", "F2")) %>% 
+  dplyr::mutate(id = dplyr::row_number()) %>%   # id for shifting
+  dplyr::mutate(F1 = dplyr::case_when(
+                       id <= 25 ~ F1 + 3,   # shift F1 +3 if in top half
+                       TRUE ~ F1),          # otherwise leave as is
+                F2 = dplyr::case_when(
+                       id <= 25 ~ F2 - 4,   # shift F2 -4 if in top half
+                       TRUE ~ F2)) %>%      # otherwise leave as is
+  tibble::as.tibble() %>% 
+  dplyr::select(-id)
+
+clust_data
+  
+
+# K-means with K=2 and 20 random starts
+km_2 <- clust_data %>%
+  stats::kmeans(centers = 2, nstart = 20)
+km_2$cluster
+km_2
+
+# K-means with K=3 and 20 random starts
+set.seed(4)
+km_3 <- clust_data %>% 
+  stats::kmeans(3, 20)
+km_3
+
+
+# Save ggplot as object for later
+k1 <- clust_data %>% 
+  dplyr::mutate(Cluster = factor(km_2$cluster)) %>% # make factor for plotting
+  ggplot(aes(x = F1, y = F2, colour = Cluster)) +
+    geom_point(alpha = 0.5, size = 3) +
+    scale_colour_manual(values = c("blue", "red")) +  # over-ride default colors
+    NULL
+
+k2 <- clust_data %>% 
+  dplyr::mutate(Cluster = factor(km_3$cluster)) %>% # make factor for plotting
+  ggplot(aes(x = F1, y = F2, colour = Cluster)) +
+    geom_point(alpha = 0.5, size = 3) +
+    scale_colour_manual(values = c("blue", "red", "purple")) +
+    NULL
+
+gridExtra::grid.arrange(k1, k2, ncol = 2)
+
+# K-means with K=3 and only one random start
+# Calculate total within cluster SSQ
+set.seed(3)
+km_3_1start <- clust_data %>%
+  stats::kmeans(3, nstart = 1)
+km_3_1start$tot.withinss
+
+# K-means with K=3 with 20 random starts
+# Calculate total within cluster SSQ
+km_3_20start <- clust_data %>% 
+  stats::kmeans(3, nstart = 20)
+km_3_20start$tot.withinss
+```
+
+
+
+-------------------------
+
+
+# Hierarchical Clustering
+
+```{r hierarchical_clustering, fig.width = 10}
+# Using the same data set
+# Using (a) complete - compute all pairwise distances and choose the largest
+#       (b) average -  compute all pairwise distances and compute the average
+#       (c) single -   compute all pairwise distances and choose the smallest
+
+hc_complete <- stats::hclust(dist(clust_data), method = "complete")
+hc_average  <- stats::hclust(dist(clust_data), method = "average")
+hc_single   <- stats::hclust(dist(clust_data), method = "single")
+
+par(mfrow = c(1, 3))
+plot(hc_complete, main = "Complete Linkage", xlab = "", sub = "", cex = 0.9)
+plot(hc_average, main = "Average Linkage", xlab = "", sub = "", cex = 0.9)
+plot(hc_single, main = "Single Linkage", xlab = "", sub = "", cex = 0.9)
+
+# Cut tree at a given number of clusters
+cutree(hc_complete, 2)
+cutree(hc_average, 2)
+cutree(hc_single, 2)
+cutree(hc_single, 4)
+```
+
+
+## Scale before clustering
+
+```{r scaling, fig.width = 10}
+# Scale before clustering
+clust_data %>%
+  scale() %>%            # scale -> mean = 0; unit variance
+  dist() %>%             # calculate distances
+  stats::hclust(method = "complete") %>%    # perform clustering
+  plot(main = "Hierarchical Clustering with Scaled Features", sub = "")
+```
+
+
+## Include???
+```{r doubtful}
+# Doubtful to include
+matrix(rnorm(30 * 3), ncol = 3) %>%     # 10x3 matrix of random data
+  t() %>%                               # transpose 
+  stats::cor() %>%                      # correlation matrix
+  magrittr::subtract(1, .) %>%          # subtract from 1
+  stats::as.dist() %>%                  # distance matrix-> for `hclust` recognizes
+  stats::hclust(method = "complete") %>%   # perfrom clustering
+  plot(main = "Complete Linkage with Correlation-Based Distance",   # S3 plot method
+       xlab = "", sub = "")
+```
+
+
+
+
+------------------------------
+
+Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.
+
