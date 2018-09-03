@@ -17,7 +17,7 @@ fontsize: 12pt
 
 # Setup
 
-```{r setup, message = FALSE}
+```{r setup, message = FALSE, warning = FALSE}
 options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 library(magrittr)     # pipes
 library(tibble)       # tibbles
@@ -314,3 +314,9 @@ purrr::map_df(1:10, function(x) {
              spec = prop.table(cmat["Down", ])[1])
 })
 ```
+
+
+
+----------------------------
+
+Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.

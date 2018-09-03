@@ -478,3 +478,7 @@ caret_gg %>%
 # Resources
 [CART Methods by Joao Neto](http://www.di.fc.ul.pt/~jpn/r/tree/tree.html)
 
+
+-----------------------------
+
+Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.

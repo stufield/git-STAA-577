@@ -20,7 +20,7 @@ fontsize: 12pt
 
 * The code below will load the libraries you will need for this tutorial.
 If you do not have one, please install with `install.packages("pkg")`:
-```{r setup, message = FALSE}
+```{r setup, message = FALSE, warning = FALSE}
 options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 options(width = 100)
 library(tibble)           # special type of data frame
@@ -756,3 +756,9 @@ Above materials are derived in part from the following sources:
     + [R for Data Science](http://r4ds.had.co.nz/)
 
 <img src="images/r4ds.jpg" width=200, height=400>
+
+
+
+------------------------------
+
+Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.

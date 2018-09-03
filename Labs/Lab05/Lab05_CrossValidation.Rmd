@@ -16,7 +16,7 @@ fontsize: 12pt
 
 # Setup
 
-```{r setup, messagel = FALSE}
+```{r setup, messagel = FALSE, warning = FALSE}
 options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 library(magrittr)     # pipes
 library(tibble)       # tibbles
@@ -181,3 +181,12 @@ lm(mpg ~ horsepower + I(horsepower^2), data = Auto) %>%
   summary() %>% 
   purrr::pluck("coefficients")
 ```
+
+
+
+
+
+
+-------------------------
+
+Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.

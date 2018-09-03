@@ -14,63 +14,87 @@ tables: yes
 fontsize: 12pt
 ---
 
+# Setup
+```{r setup, warning = FALSE, message = FALSE}
+library(tibble)           # special type of data frame
+library(magrittr)         # pipes
+library(dplyr)            # data manipulation
+library(ggplot2)          # pretty plots
+library(tidyr)            # reshape data frames; mostly for ggplots
+```
+
+
+-------------------------
+
 
 # Introduction
 
 This is a very simple streamlined set of exmple code to describe some basic summary statistics and graphs to facilitate preliminary data exploration.
 
 
-# Data
+# The Iris Data Set
 
 We will be using a few data sets during the course, one of the classic statistical learning data sets is the *iris* data set which comes with any standard installation of R. This famous (Fisher's or Anderson's) iris data set gives the measurements in centimeters of the variables sepal length and width and petal length and width, respectively, for 50 flowers from each of 3 species of iris. The species are *Iris setosa*, *versicolor*, and *virginica*.
+
 ```{r}
 ?iris        # open help file for the object
-dim(iris)        # get dimensions of data
+dim(iris)    # get dimensions of data
 class(iris)  # a data frame class object
 ```
 
-The first goal for any analysis is to understand the dimensions and structure of the data set you are working with. Here are some simple commands to understand the general structure of your data set, typically in the form of a **data.frame** object:
+The first goal for any analysis is to understand the dimensions and structure of the data set you are working with. Here are some simple commands to understand the general structure of your data set, typically in the form of a `data.frame` (or nowadays `tibble`) class object:
+
 ```{r}
 dim(iris)            # dimensions (rows, columns)
 str(iris)            # structure of the data frame object
-iris[1:5,]           # echo the first 5 rows
+iris[1:5, ]          # echo the first 5 rows
 names(iris)          # what are the column names
 sapply(iris, class)  # what are the classes of each column (very important!); feature vs. class data
 table(iris$Species)  # once you know which column contains the classes, what are the class counts?
 ```
 
-The *summary* function is a special class of generic functions (called S3) that perform specific operations depending on the class object they are performing on ... in this case a "data.frame" object. The default is to "summarize" the columns, reporting a different summary for each:
+
+The `summary` function is a special class of generic functions (called S3) 
+that perform specific operations depending on the class object they are
+performing on ... in this case a `data.frame` class object.
+The default is to **summarize** the columns, reporting a different
+summary for each:
 ```{r}
 summary(iris)
 ```
 
-However, it is often more useful from a classification perspective to know the feature means *by class*, which can be accomplished via *tapply*:
+However, it is often more useful from a classification perspective to know the feature means *by class*, which can be accomplished via the `tapply` function:
 ```{r}
 sapply(iris[, -5], function(x)
-   tapply(x, iris$Species, mean))   # feature means split by Species
+  tapply(x, iris$Species, mean))   # feature means split by Species
 ```
 
-There is a new syntax that has become quite popular in recent years, referred to simply as `tidy` data analysis, spearheaded by Hadley Wickham. Here is how you would get to the same answer using this syntax:
+There is a new syntax that has become quite popular in recent years, referred 
+to simply as `tidy` data analysis, spearheaded by Hadley Wickham.
+Here is how you would get to the same answer using this syntax:
 
 ```{r}
-library(tibble)
-iris %>% as.tibble %>%    # make 'iris' a `tibble` data frame
-  group_by(Species) %>%
-  summarise_all(funs(mean))
+iris %>% 
+  tibble::as.tibble() %>%    # make 'iris' a `tibble` data frame
+  dplyr::group_by(Species) %>%
+  dplyr::summarise_all(funs(mean))
 ```
 
 
 
 # Splitting Data
 All of the following commands produce exactly the same output:
+
 ```{r}
 split(iris$Sepal.Length, iris$Species)
 split(iris[["Sepal.Length"]], iris$Species)
 split(iris[[1L]], iris$Species)
-split(iris[[which(names(iris)=="Sepal.Length")]], iris$Species)
+split(iris[[which(names(iris) == "Sepal.Length")]], iris$Species)
 ```
 
+
 ## Exercise: what does the following command return?
+
 ```{r, eval = FALSE}
 split(iris, iris$Species)
 ```
@@ -78,42 +102,39 @@ split(iris, iris$Species)
 
 ----------------------
 
+
+
+
 # Plotting
 
 ```{r}
-par(mfrow=c(2, 2))                       # make 2x2 grid for plots
-par(mgp=c(2, 0.75, 0), mar=c(3, 4, 3, 1))    # graphics settings; squeeze margins
-lapply(names(iris)[-5], function(class)
-   boxplot(split(iris[[class]], iris$Species), main = class, col = 1:3)) %>%
-   invisible   # pipe to invisible to suppress output
+par(mfrow = c(2, 2))                          # make 2x2 grid for plots
+par(mgp = c(2, 0.75, 0), mar = c(3, 4, 3, 1)) # graphics settings; squeeze margins
+purrr::walk(names(iris)[-5], function(class)  # purrr::walk() suppresses output; side effects only
+  boxplot(split(iris[[class]], iris$Species), main = class, col = 1:3))
 ```
 
 
 
+------------------
 
-# The same via `ggplot2`
+
+
+# Plotting via `ggplot2`
 ```{r}
-library(ggplot2)
-library(reshape2)
-thm <- theme_bw() +
-  theme(
-    panel.background = element_rect(fill = "transparent", colour = NA),
-    plot.background = element_rect(fill = "transparent", colour = NA),
-    legend.position = "top",
-    legend.background = element_rect(fill = "transparent", colour = NA),
-    legend.key = element_rect(fill = "transparent", colour = NA)
-  )
-theme_set(thm)
+df <- iris %>% 
+  tidyr::gather(key = "Feature", value = "cm", -Species) %>%  # re-arrange to long format
+  dplyr::mutate(Feature = gsub("\\.", " ", Feature)) %>%   # remove dot in name
+  tibble::as.tibble()     # make tibble for easy viewing
 
-df <- melt(iris, id.vars = "Species", variable.name = "Feature",
-           value.name = "cm") %>%
-  mutate(Feature=gsub("\\.", " ", Feature))
+df
 
-ggplot(df, aes(y = cm, x = Species, fill = Species)) +
-  geom_boxplot(color = "#1F3552", alpha=0.75, size=0.5) +
-  scale_x_discrete(name="Species") +
+df %>% 
+ggplot(aes(y = cm, x = Species, fill = Species)) +
+  geom_boxplot(color = "#1F3552", alpha = 0.75, size = 0.5) +
+  scale_x_discrete(name = "Species") +
   ggtitle("Overall Title") +
-  theme(plot.title = element_text(hjust=0.5)) +
+  theme(plot.title = element_text(hjust = 0.5)) +
   facet_wrap(~Feature, ncol = 2) 
 ```
 
@@ -121,19 +142,28 @@ ggplot(df, aes(y = cm, x = Species, fill = Species)) +
 
 
 # Pairwise plots
-Very useful for visually inspecting variables for patterns of interest. You will typically need to know your outcome of interest *a priori*, i.e. supervised analysis, or you will not know how to color the points.
+Very useful for visually inspecting variables for patterns of interest.
+You will typically need to know your outcome of interest **a priori**,
+i.e. supervised analysis, or you will not know how to color the points.
 
 ```{r}
-plot(iris[, -5], col=iris$Species)
+plot(iris[, -5], col = iris$Species)
 ```
 
 
 ```{r}
-ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
-  geom_point(size = 2)
+iris %>% 
+  ggplot(aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+    geom_point(alpha = 0.5, size = 2.5) +
+    ggtitle("Title Goes Here") +
+    # this is a useful trick; add `NULL` as last line
+    # you then don't need to manage the `+` signs above when building the layers
+    NULL  
 ```
+
 
 
 
 -----------------------------
 
+Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.

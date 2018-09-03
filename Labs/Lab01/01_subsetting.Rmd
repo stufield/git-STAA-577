@@ -835,3 +835,8 @@ Above materials are derived in part from the following sources:
 
 Hadley Wickham: [Advanced R](http://adv-r.had.co.nz/Subsetting.html)
 
+
+
+------------------------------
+
+Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.
