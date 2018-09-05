@@ -320,11 +320,12 @@ summary(tune_svm)
 tuned_svm_df <- data.frame(
   true_class      = svm_test$y,
   predicted_class = predict(tune_svm$best.model,
-                            newx = dplyr::select(svm_test, -y))   # note: `newx =` NOT `newdata =`
-                            #newdata = dplyr::select(svm_test, -y))
-  # THIS COULD BE AN ERROR IN THE TEXT! There is no `newx` argument to predict()
-  # THIS IS A DIABOLICAL EDGE CASE OF BAD LUCK; but I think you've stubbed
-  # your toe on this one once in class; predict has a quirky default for newdata!
+                            #newx = dplyr::select(svm_test, -y))
+                            # note: `newx` != `newdata` !!!
+                            # textbook may have an error here
+                            newdata = dplyr::select(svm_test, -y))
+  # There is no `newx` argument to `predict()`; you want `newdata`
+  # THIS IS A DIABOLICAL EDGE CASE; but on that arises when using `predict`
 )
 
 tuned_svm_df %>% 

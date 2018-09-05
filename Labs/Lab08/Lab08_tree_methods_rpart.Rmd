@@ -55,6 +55,18 @@ dim(Carseats)
 
 
 # Fitting Classification Trees
+**NOTE**: In this lab we will use the `rpart::rpart` function instead of the
+`tree::tree` function which the ISLR textbook uses. The reasons boil down to:
+
+  1. `rpart` uses "recursive partitioning" to build its trees, which in theory
+  should be faster.
+  2. Previous experience has shown a *slight* performance improvement in 
+  classification problems (though performance is similar in *this* data problem.
+  3. It is an implementation of most of the tree fitting algorithm described
+  in the 1984 book by Breiman, Friedman, Olshen and Stone (well known).
+  4. In the years since ISLR first came out, `rpart` has gained popularity over
+  `tree`.
+
 First we fit a general classification tree to the `Carseats` data set:
 ```{r fit_tree1}
 # Create a variable for classification of 
