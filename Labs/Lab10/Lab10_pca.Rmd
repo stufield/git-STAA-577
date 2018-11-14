@@ -3,7 +3,7 @@ title: 'STAA 577: Laboratory Ten </br> `tidyverse` version'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
-  html_notebook: 
+  html_notebook:
     code_folding: show
     number_sections: yes
     toc: yes
@@ -12,7 +12,7 @@ output:
 ratio: '9:16'
 tables: yes
 fontsize: 12pt
-editor_options: 
+editor_options:
   chunk_output_type: inline
 ---
 
@@ -117,9 +117,9 @@ gridExtra::grid.arrange(v1, v2, ncol = 2)
 ```{r k_means, fig.width = 11, fig.height = 5}
 # Simulate some data
 set.seed(2)
-clust_data <- matrix(stats::rnorm(50 * 2), ncol = 2) %>% 
-  data.frame() %>% 
-  magrittr::set_names(c("F1", "F2")) %>% 
+clust_data <- matrix(stats::rnorm(50 * 2), ncol = 2) %>%
+  data.frame() %>%
+  magrittr::set_names(c("F1", "F2")) %>%
   dplyr::mutate(id = dplyr::row_number()) %>%   # id for shifting
   dplyr::mutate(F1 = dplyr::case_when(
                        id <= 25 ~ F1 + 3,   # shift F1 +3 if in top half
@@ -127,11 +127,11 @@ clust_data <- matrix(stats::rnorm(50 * 2), ncol = 2) %>%
                 F2 = dplyr::case_when(
                        id <= 25 ~ F2 - 4,   # shift F2 -4 if in top half
                        TRUE ~ F2)) %>%      # otherwise leave as is
-  tibble::as.tibble() %>% 
+  tibble::as.tibble() %>%
   dplyr::select(-id)
 
 clust_data
-  
+
 
 # K-means with K=2 and 20 random starts
 km_2 <- clust_data %>%
@@ -141,20 +141,20 @@ km_2
 
 # K-means with K=3 and 20 random starts
 set.seed(4)
-km_3 <- clust_data %>% 
+km_3 <- clust_data %>%
   stats::kmeans(3, 20)
 km_3
 
 
 # Save ggplot as object for later
-k1 <- clust_data %>% 
+k1 <- clust_data %>%
   dplyr::mutate(Cluster = factor(km_2$cluster)) %>% # make factor for plotting
   ggplot(aes(x = F1, y = F2, colour = Cluster)) +
     geom_point(alpha = 0.5, size = 3) +
     scale_colour_manual(values = c("blue", "red")) +  # over-ride default colors
     NULL
 
-k2 <- clust_data %>% 
+k2 <- clust_data %>%
   dplyr::mutate(Cluster = factor(km_3$cluster)) %>% # make factor for plotting
   ggplot(aes(x = F1, y = F2, colour = Cluster)) +
     geom_point(alpha = 0.5, size = 3) +
@@ -172,7 +172,7 @@ km_3_1start$tot.withinss
 
 # K-means with K=3 with 20 random starts
 # Calculate total within cluster SSQ
-km_3_20start <- clust_data %>% 
+km_3_20start <- clust_data %>%
   stats::kmeans(3, nstart = 20)
 km_3_20start$tot.withinss
 ```
@@ -222,11 +222,11 @@ clust_data %>%
 ## Include???
 ```{r doubtful}
 # Doubtful to include
-matrix(rnorm(30 * 3), ncol = 3) %>%     # 10x3 matrix of random data
-  t() %>%                               # transpose 
-  stats::cor() %>%                      # correlation matrix
-  magrittr::subtract(1, .) %>%          # subtract from 1
-  stats::as.dist() %>%                  # distance matrix-> for `hclust` recognizes
+matrix(rnorm(30 * 3), ncol = 3) %>%        # 10x3 matrix of random data
+  t() %>%                                  # transpose
+  stats::cor() %>%                         # correlation matrix
+  magrittr::subtract(1, .) %>%             # subtract from 1
+  stats::as.dist() %>%                     # distance matrix-> for `hclust` recognizes
   stats::hclust(method = "complete") %>%   # perfrom clustering
   plot(main = "Complete Linkage with Correlation-Based Distance",   # S3 plot method
        xlab = "", sub = "")

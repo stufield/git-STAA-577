@@ -3,7 +3,7 @@ title: 'STAA 577: Laboratory Seven </br> `tidyverse` version'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
-  html_notebook: 
+  html_notebook:
     code_folding: show
     number_sections: yes
     toc: yes
@@ -12,7 +12,7 @@ output:
 ratio: '9:16'
 tables: yes
 fontsize: 12pt
-editor_options: 
+editor_options:
   chunk_output_type: inline
 ---
 
@@ -98,7 +98,7 @@ lo        <- fit_preds$fit - 2 * fit_preds$se.fit
 df_fit <- data.frame(     fit = fit_preds$fit,
                      age_grid = age_grid,
                            up = up,
-                           lo = lo) %>% 
+                           lo = lo) %>%
   tibble::as.tibble()
 
 df_fit      # look at data for lines in `ggplot`
@@ -107,15 +107,15 @@ df_fit      # look at data for lines in `ggplot`
 data.frame(age = age, wage = wage) %>%
   ggplot(aes(x = age, y = wage)) +
   geom_point(alpha = 0.25) +
-  labs(title = "Degree-4 Polynomial") +  
+  labs(title = "Degree-4 Polynomial") +
   geom_line(data = df_fit, aes(x = age_grid, y = fit), col = "blue") +
   geom_line(data = df_fit, aes(x = age_grid, y = up),
             col = "red", linetype = "dashed") +
   geom_line(data = df_fit, aes(x = age_grid, y = lo),
             col = "red", linetype = "dashed") +
-  # this trick that allows commenting layer lines above 
+  # this trick that allows commenting layer lines above
   # without having to manage the `+` signs between layers
-  NULL        
+  NULL
 ```
 
 
@@ -191,7 +191,7 @@ lr_fit <- data.frame(
   prob  = LRprobs,
   upper = exp(upper) / (1 + exp(upper)),   # transform -> probability space
   lower = exp(lower) / (1 + exp(lower))    # transform -> probability space
-  ) %>% 
+  ) %>%
   tibble::as.tibble()
 
 lr_fit       # look at data for lines in `ggplot`
@@ -204,7 +204,7 @@ data.frame(age = age, y = I(wage > 250)/5) %>%
   ylim(c(0, 0.22)) +
   geom_line(data = lr_fit, aes(x = age, y = prob), col = "blue") +
   labs(title = "Polynomial Logistic Regression with SE",
-       y = "I(wage > 250)") +  
+       y = "I(wage > 250)") +
   geom_line(data = lr_fit, aes(x = age, y = upper),
             col = "red", linetype = "dashed") +
   geom_line(data = lr_fit, aes(x = age, y = lower),
@@ -213,7 +213,7 @@ data.frame(age = age, y = I(wage > 250)/5) %>%
 
 table(cut(age, 4))     # get no. obs per bin if split age into 4 groups
 
-stats::lm(wage ~ cut(age, 4), data = Wage) %>% 
+stats::lm(wage ~ cut(age, 4), data = Wage) %>%
   broom::tidy()
 ```
 
@@ -234,7 +234,7 @@ bs_pred      <- predict(b_spline_fit,
                         newdata = data.frame(age = age_grid),
                         se = TRUE)
 
-# df = (number of degrees of freedom) locates knots 
+# df = (number of degrees of freedom) locates knots
 # based on uniform percentiles of the data
 dim(bs(age, knots = c(25, 40, 60)))
 dim(bs(age, df = 6))
@@ -255,7 +255,7 @@ gg_df <- data.frame(      # gather relevant vectors into a data frame
   age_grid = age_grid,
   bs_fit   = bs_pred$fit,
   ns_fit   = ns_pred$fit
-  ) %>% 
+  ) %>%
   dplyr::mutate(bs_upper = bs_fit + 2 * bs_pred$se.fit,  # calc 2se
                 bs_lower = bs_fit - 2 * bs_pred$se.fit) %>%  # calc 2se
   tibble::as.tibble()
@@ -280,7 +280,7 @@ data.frame(age = age, wage = wage) %>%
 
 
 ## Smoothing Splines
-  
+
 ```{r smoothing_splines}
 # Fit a smoothing spline
 smooth_fit <- stats::smooth.spline(age, wage, df = 16)
@@ -294,15 +294,15 @@ smooth_df <- data.frame(
   x         = smooth_fit$x,
   smooth    = smooth_fit$y,
   smooth_cv = smooth_fit_cv$y
-  ) %>% 
-  tidyr::gather(key = "fit", value = "predicted", -x) %>% 
+  ) %>%
+  tidyr::gather(key = "fit", value = "predicted", -x) %>%
   tibble::as.tibble()
 
 smooth_df    # quickly view the plotting data
 
 full_df <- data.frame(age = age, wage = wage)
 
-full_df %>% 
+full_df %>%
   ggplot(aes(x = age, y = wage)) +
   geom_point(alpha = 0.25) +
   ggtitle("Smoothing Spline") +
@@ -366,7 +366,7 @@ anova(gam_m1, gam_m2, gam_m3, test = "F")
 # ALSO, THEY SAY M2 IS PREFERRED, THEN PROCEED TO SUMMARIZE M3, WHY?
 summary(gam_m3)
 
-# Don't forget about `broom::tidy` 
+# Don't forget about `broom::tidy()`
 # Easily and consistently summarize model output
 broom::tidy(gam_m3)
 ```
@@ -375,16 +375,16 @@ broom::tidy(gam_m3)
 ---------------------------
 
 
-Next we use the built-in S3 `Gam` method to the `predict` generic
+Next we use the built-in S3 `Gam` method to the `predict()` generic
 to make predictions on the training set & calc MSE.
 The `predict()` generic lives in `stats` package.
-It is not necessary to select the model covariates first, this will happen 
-internally within `predict`. However, it can be a good practice to do so, 
+It is not necessary to select the model covariates first, this will happen
+internally within `predict`. However, it can be a good practice to do so,
 to ensure you're not accidentally cheating.
 Below we use `dplyr::select` to keep *only* the predictors in the `new data`.
 
 ```{r mse}
-pred_wage <- predict(gam_m2, newdata = dplyr::select(Wage, year, age, education))  
+pred_wage <- predict(gam_m2, newdata = dplyr::select(Wage, year, age, education))
 mse       <- mean((wage - pred_wage)^2)   # calculate MSE
 mse
 ```

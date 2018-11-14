@@ -3,7 +3,7 @@ title: 'STAA 577: Laboratory Eight </br> `tidyverse` version'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
-  html_notebook: 
+  html_notebook:
     code_folding: show
     number_sections: yes
     toc: yes
@@ -12,7 +12,7 @@ output:
 ratio: '9:16'
 tables: yes
 fontsize: 12pt
-editor_options: 
+editor_options:
   chunk_output_type: inline
 ---
 
@@ -60,7 +60,7 @@ dim(Carseats)
 
   1. `rpart` uses "recursive partitioning" to build its trees, which in theory
   should be faster.
-  2. Previous experience has shown a *slight* performance improvement in 
+  2. Previous experience has shown a *slight* performance improvement in
   classification problems (though performance is similar in *this* data problem.
   3. It is an implementation of most of the tree fitting algorithm described
   in the 1984 book by Breiman, Friedman, Olshen and Stone (well known).
@@ -69,7 +69,7 @@ dim(Carseats)
 
 First we fit a general classification tree to the `Carseats` data set:
 ```{r fit_tree1}
-# Create a variable for classification of 
+# Create a variable for classification of
 # "low" and "high" sales based on sales cutoff of 8.0
 # Append new categorical variable to the Carseats dataframe
 # Ensure the response variable (High) is a factor for rpart::rpart
@@ -107,16 +107,16 @@ tree_carseats_trivial
 
 
 # Fitting Classification Tree Test Set
-To properly fit a model, we must evaluate performance based on a hold-out 
+To properly fit a model, we must evaluate performance based on a hold-out
 test set:
 
 ```{r fit_tree2}
 set.seed(2)                              # reproducible
-train_car <- Carseats %>% 
+train_car <- Carseats %>%
   dplyr::sample_frac(size = 0.5)         # random selection of rows @ 50% = 200
-test <- Carseats %>%  
-  dplyr::anti_join(train_car, by = "id") %>%  # use anti_join to get the sample setdiff 
-  dplyr::select(-Sales, -id)              # remove Sales and merge identifier
+test <- Carseats %>%
+  dplyr::anti_join(train_car, by = "id") %>%  # use anti_join to get the sample setdiff
+  dplyr::select(-Sales, -id)                  # remove Sales and merge identifier
 train_car %<>% dplyr::select(-Sales, -id)     # remove from training also
 
 tree_carseats <- rpart::rpart(High ~ ., data = train_car)
@@ -154,11 +154,11 @@ rpart::plotcp(tree_carseats)   # plot cross-validation results
 title("Tree Size")
 
 # which level of complexity minimizes cv error?
-best_cp <- tree_carseats$cptable %>% 
+best_cp <- tree_carseats$cptable %>%
   data.frame() %>%      # easier to work with than matrices
   dplyr::slice(which.min(.$xerror)) %>% # get the row where `xerror` is min
   dplyr::pull("CP")                     # pull out `CP` from that row
-                 
+
 best_cp
 ```
 
@@ -173,12 +173,12 @@ best_cp
 
 ## Pruning Trees
 It is often a good idea to *prune* the tree to avoid over-fitting, this is
-achieved via the `rpart::prune` function given a *complexity parameter*, 
+achieved via the `rpart::prune` function given a *complexity parameter*,
 `cp` (calculated above). Note the difference between *relative error* (plotted) and *xerror* (which we are using).
 
 ```{r pruning, warning = FALSE}
 # Prune to 8-node tree and predict again using new tree
-# cp is the complexity parameter; 
+# cp is the complexity parameter;
 #prune_carseats_8 <- rpart::prune(tree_carseats, cp = 0.0208)
 prune_carseats_8 <- rpart::prune(tree_carseats, cp = best_cp)
 par(xpd = NA)
@@ -189,10 +189,10 @@ title(main = "8-leaf classification tree for carseats")
 # Calculate performance metrics
 tree_pred_8 <- predict(prune_carseats_8, test, type = "class")
 tibble(test = test$High,
-       pred = tree_pred_8) %>% 
+       pred = tree_pred_8) %>%
   yardstick::conf_mat(truth = test, estimate = pred)  # confusion matrix
 tibble(test = test$High,
-       pred = tree_pred_8) %>% 
+       pred = tree_pred_8) %>%
   yardstick::accuracy(truth = test, estimate = pred)  # accuracy
 ```
 
@@ -210,16 +210,16 @@ tibble(test = test$High,
 We next turn our attention to a regression setting using the `Boston` data set.
 
 ```{r Regression_trees}
-Boston %<>% tibble::as.tibble() %>% 
-  dplyr::mutate(id = dplyr::row_number()) 
+Boston %<>% tibble::as.tibble() %>%
+  dplyr::mutate(id = dplyr::row_number())
 Boston
 
 set.seed(1)                              # reproducible
-train_boston <- Boston %>% 
+train_boston <- Boston %>%
   dplyr::sample_frac(size = 0.5)         # random selection of rows @ 50% = 200
-test_boston <- Boston %>%  
-  dplyr::anti_join(train_boston, by = "id") %>%  # use anti_join to get the sample setdiff 
-  dplyr::select(-id)              # remove id 
+test_boston <- Boston %>%
+  dplyr::anti_join(train_boston, by = "id") %>%  # use anti_join to get the sample setdiff
+  dplyr::select(-id)              # remove id
 train_boston %<>% dplyr::select(-id)     # remove id
 
 boston_tree <- rpart::rpart(medv ~ ., data = train_boston)
@@ -253,7 +253,7 @@ mse1
 
 # Plotting predictions via `ggplot`
 tibble::tibble(actual_medv    = test_boston$medv,
-               predicted_medv = yhat_1) %>% 
+               predicted_medv = yhat_1) %>%
   ggplot(aes(x = predicted_medv, y = actual_medv)) +
     geom_point(alpha = 0.5, position = position_jitter(width = 0.25)) +  # jitter in `x`
     geom_smooth(method = "lm") +                    # add linear fit with se CI95
@@ -292,7 +292,7 @@ mse2
 
 # Plotting predictions via `ggplot`
 tibble::tibble(actual_medv    = test_boston$medv,
-               predicted_medv = yhat_2) %>% 
+               predicted_medv = yhat_2) %>%
   ggplot(aes(x = predicted_medv, y = actual_medv)) +
     geom_point(alpha = 0.5) +               # no jitter necessary this time
     geom_smooth(method = "lm") +                    # add linear fit with se CI95
@@ -308,7 +308,7 @@ yhat_3 <- predict(rf_boston25, newdata = dplyr::select(test_boston, -medv))
 mse3   <- mean((yhat_3 - test_boston$medv)^2)
 mse3
 
-# Reduce the number of variables/predictors randomly 
+# Reduce the number of variables/predictors randomly
 # sampled at each split (`mtry = 6`)
 set.seed(1)
 rf_boston6 <- randomForest::randomForest(medv ~ ., data = train_boston,
@@ -320,9 +320,9 @@ mse4
 
 
 ## Gini Importance
-  1. Mean decrease in accuracy in predictions on out-of-bag samples 
+  1. Mean decrease in accuracy in predictions on out-of-bag samples
      when variable is excluded.
-  2. Measure of the total decrease in node impurity that results from 
+  2. Measure of the total decrease in node impurity that results from
      splits over the variable -> Averaged over all trees in forest.
   3. See laboratory *followup_notes* file: `gini_backward_rf.nb.html`
      for additional discussion about `Gini` importance.
@@ -330,7 +330,7 @@ mse4
 ```{r gini}
 importance(rf_boston6)       # built-in S3 print method for class `randomForest`
 varImpPlot(rf_boston6)       # built-in S3 plot method for class `randomForest`
-``` 
+```
 
 
 
@@ -341,7 +341,7 @@ and plot with `ggplot2` all in one pipe chain.
 
 ```{r rf_optimization, fig.width = 10}
 set.seed(101)
-n_feat    <- ncol(train_boston) - 1 
+n_feat    <- ncol(train_boston) - 1
 mtry_vec  <- seq(floor(n_feat / 3), n_feat)
 ntree_vec <- seq(50, 1000, by = 50)
 
@@ -351,7 +351,7 @@ mse_mtry <- purrr::map_dbl(mtry_vec, ~ {    # map_dbl -> output = double vector
   mean((yhat - test_boston$medv)^2)
 })
 
-mse_ntree <- purrr::map_dbl(ntree_vec, ~ { 
+mse_ntree <- purrr::map_dbl(ntree_vec, ~ {
   rf   <- randomForest::randomForest(medv ~ ., data = train_boston, ntree = .x)
   yhat <- predict(rf, newdata = dplyr::select(test_boston, -medv))
   mean((yhat - test_boston$medv)^2)
@@ -359,13 +359,13 @@ mse_ntree <- purrr::map_dbl(ntree_vec, ~ {
 
 gg <- list()
 gg$mtry <- tibble::tibble(mtry = mtry_vec,
-                          MSE  = mse_mtry) %>% 
+                          MSE  = mse_mtry) %>%
   ggplot(aes(x = mtry, y = MSE)) +
     geom_point(size = 3, colour = "blue") +
     geom_line(colour = "blue") +
     NULL
 gg$ntree <- tibble::tibble(ntree = ntree_vec,
-                           MSE   = mse_ntree) %>% 
+                           MSE   = mse_ntree) %>%
   ggplot(aes(x = ntree, y = MSE)) +
     geom_point(size = 3, colour = "blue") +
     geom_line(colour = "blue") +
@@ -401,8 +401,8 @@ summary(gbm_boston1)
 
 ## GBM Plotting
 ```{r plotting, fig.width = 9, fig.height=5}
-# Partial dependence plots illustrate the marginal effect 
-# of the selected variables  on the response after integrating 
+# Partial dependence plots illustrate the marginal effect
+# of the selected variables  on the response after integrating
 # out the other variables
 par(mfrow = c(1, 2))
 plot(gbm_boston1, i = "rm")     # built-in S3 plot method
@@ -420,7 +420,7 @@ yhat_gbm1 <- predict(gbm_boston1, newdata = dplyr::select(test_boston, -medv),
 mse5 <- mean((yhat_gbm1 - test_boston$medv)^2)
 mse5
 
-# Set shrinkage parameter: 0.001 -> 0.2 
+# Set shrinkage parameter: 0.001 -> 0.2
 gbm_boston0.2 <- gbm::gbm(medv ~ ., data = train_boston,
                           distribution = "gaussian", n.trees = 5000,
                           interaction.depth = 4, shrinkage = 0.2,
@@ -439,8 +439,8 @@ mse6
 
 
 # Appendix: CART via `caret`
-The [caret](http://topepo.github.io/caret/index.html) package also provides 
-a convenient framework for fitting cross-validated CART models in `R`. 
+The [caret](http://topepo.github.io/caret/index.html) package also provides
+a convenient framework for fitting cross-validated CART models in `R`.
 
 Two notes:
 
@@ -452,7 +452,7 @@ ctrl <- caret::trainControl(
   method = "cv",
   classProbs = TRUE,    # predict the probabilities
   # Compute the ROC AUC as well as the sens and
-  # spec from the default 50% cutoff. The 
+  # spec from the default 50% cutoff. The
   # function `twoClassSummary` produces those.
   summaryFunction = caret::twoClassSummary,
   savePredictions = "final",
@@ -474,13 +474,13 @@ cart_caret$finalModel    # View the `best model`
 caret_gg <- list()
 
 # View CV ROCs by tuning par; S3 ggplot method
-caret_gg$maxdepth <- ggplot(cart_caret) 
+caret_gg$maxdepth <- ggplot(cart_caret)
 
 # Variable importance
-cart_imp <- varImp(cart_caret, scale = FALSE, 
+cart_imp <- varImp(cart_caret, scale = FALSE,
                    surrogates = FALSE, competes = FALSE)
 caret_gg$imp <- ggplot(cart_imp, top = 7) + xlab("")
-caret_gg %>% 
+caret_gg %>%
   purrr::invoke(gridExtra::grid.arrange, ., ncol = 2)
 ```
 

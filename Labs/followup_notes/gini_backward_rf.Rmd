@@ -45,7 +45,7 @@ Every time a split of a node is made on variable `m` the *Gini Impurity* (`G`) c
 
 $$G = \sum_{i=1}^{n_c} p_i(1 - p_i),$$
 
-where $n_c$ is the number of classes in the target variable and $p_i$ is the ratio of this class. 
+where $n_c$ is the number of classes in the target variable and $p_i$ is the ratio of this class.
 A convenient property of the Gini impurity metric `G` is that it allows one to calculate a *theoretical maximum* that is based **solely** on the initial class distribution:
 ```{r}
 # @param x A vector of the initial true classes
@@ -181,16 +181,16 @@ set.seed(100)                # match 1st model above
 models   <- list()
 features <- names(gini_data)[names(gini_data) != "class"]
 for ( i in 1:length(features) ) {
-  
+
   rf <- randomForest::randomForest(class ~ .,
                                    dplyr::select(gini_data,
                                                  class,
                                                  features))
-  
+
   min_ft   <- rownames(rf$importance)[which.min(rf$importance)]
   features <- setdiff(features, min_ft)
   models[[paste0("Iter", i)]] <- rf
-  
+
 }
 sapply(models, importance)
 ```
@@ -233,7 +233,7 @@ qplot(rev(seq(aucs)), aucs) +
 From the `gini_max` function above, we can write a function to plot the `Gini Importance` with a rescaled y-axis reflecting `I` as a proportion of the theoretical maximum:
 ```{r, fig.width = 8, fig.height = 9}
 plotGiniMax <- function(model, max) {
-  
+
   randomForest::importance(model) %>%
     data.frame() %>%
     tibble::rownames_to_column("feat") %>%
@@ -242,7 +242,7 @@ plotGiniMax <- function(model, max) {
       geom_bar(stat = "identity") +
       ylim(0, 1) +
       xlab("Feature")
-  
+
 }
 max_g <- gini_max(gini_data$class)
 purrr::map(models, plotGiniMax, max = max_g) %>%

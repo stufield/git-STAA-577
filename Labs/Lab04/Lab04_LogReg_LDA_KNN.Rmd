@@ -92,22 +92,22 @@ mean(glm.pred == Smarket$Direction)  # proportion predicted correctly
 
 ## A note about confusion matrices
 There are various (arbitrary!) ways to present prediction performance summaries,
-none more `correct` than any other. For consistency, this course will use the 
-default construction below, where the `truth` standard is at left 
+none more `correct` than any other. For consistency, this course will use the
+default construction below, where the `truth` standard is at left
 and the predictions along the top. Negative predictions (i.e. `controls`) occur
 first, followed by positive predictions. With this construction `accuracy` is
 diagonal sum divided by the total sum, `specificity` is determined
-by the proportion of correct *negative* predictions in the first row, and 
+by the proportion of correct *negative* predictions in the first row, and
 `sensitivity` is determined by the proportion of the correct *positive* predictions
 in the second row.
 ```{r confusion, echo = FALSE}
 c("TN", "FN", "FP", "TP") %>%
   matrix(ncol = 2, dimnames = list(Truth = c("neg", "pos"),
-                                   Prediction = c("neg", "pos"))) %>% 
+                                   Prediction = c("neg", "pos"))) %>%
   as.table()
 ```
 
-  
+
 ---------------------------
 
 # Logistic Regression II
@@ -197,11 +197,11 @@ predict(glm.fit,
                              Lag2 = c(1.1, -0.8)),
         type = "response")
 ```
-  
-  
+
+
 ----------------------
-  
-  
+
+
 
 # Linear Discriminant Analysis (LDA)
 ```{r LDA}

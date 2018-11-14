@@ -42,7 +42,7 @@ boot5
 ```
 #### Notice:
 
-  * that `boot5` is a special class object (`bootstraps`, `rset`) but it's also a `tibble` object, so on it's base it's just a classy data frame. 
+  * that `boot5` is a special class object (`bootstraps`, `rset`) but it's also a `tibble` object, so on it's base it's just a classy data frame.
   * We are used to seeing data frames contain scalars or single elements in each of it's n x p cells, however doesn't *have* to be the case. The `splits` column contains special `rsplit` objects. If you look closely at them with `str`, you'll see that they themselves are just lists, which themselves contain data frames and vectors of the indices for the samples that are included in the bootstrap.
   * It's like a russian nesting doll of data!
   * The advantage once this structure exists is that all one must do is iterate over the rows of the tibble (`boot5`) to proceed with the model fitting process. All the necessary information is contained in each `splits` column of the tibble.

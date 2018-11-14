@@ -3,7 +3,7 @@ title: 'STAA 577: Laboratory Six </br> `tidyverse` version'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
-  html_notebook: 
+  html_notebook:
     code_folding: show
     number_sections: yes
     toc: yes
@@ -56,15 +56,15 @@ sum(is.na(Hitters))           # and no more missing data for Salary
 
 
 # Subset Selection
-The `leaps::regsubsets` function performs an exhaustive search for the best 
-subsets of the variables in `x` for predicting `y` in a Linear 
+The `leaps::regsubsets` function performs an exhaustive search for the best
+subsets of the variables in `x` for predicting `y` in a Linear
 Regression setting, using an efficient branch-and-bound algorithm. It chooses
 the best subset based on RSS. See `?leaps::regsubsets`.
 
 ```{r subset_selection}
 regfit_full <- leaps::regsubsets(Salary ~ ., Hitters)
 
-# Best two-variable model contains 
+# Best two-variable model contains
 # Hits and CRBI features
 # Rather verbose print method; only look at `obj` entry (Simon; pls double check)
 summary(regfit_full)$obj
@@ -98,7 +98,7 @@ p_rss <- qplot(seq_along(reg_summary$rss), reg_summary$rss,
 pt_adjr2 <- which.max(reg_summary$adjr2)   # index of max feature
 p_adjr2  <- qplot(seq_along(reg_summary$adjr2), reg_summary$adjr2,
                   xlab = "Number of Variables", ylab = "Adjusted RSq") +
-  geom_line() + 
+  geom_line() +
   geom_point(aes(x = pt_adjr2, y = reg_summary$adjr2[pt_adjr2]),
              colour = "red", size = 3)
 # CP
@@ -108,7 +108,7 @@ p_cp  <- qplot(seq_along(reg_summary$cp), reg_summary$cp,
   geom_line() +
   geom_point(aes(x = pt_cp, y = reg_summary$cp[pt_cp]),
              colour = "red", size = 3)
-  
+
 
 pt_bic <- which.min(reg_summary$bic)
 p_bic  <- qplot(seq_along(reg_summary$bic), reg_summary$bic,
@@ -127,8 +127,8 @@ gridExtra::grid.arrange(p_rss,
 
 
 The `leaps` package has a (rather ugly) built in S3 plot
-method (sorry, no `ggplot`) for class `regsubsets` which can be 
-used to display the selected variables for the best model for a 
+method (sorry, no `ggplot`) for class `regsubsets` which can be
+used to display the selected variables for the best model for a
 given number of predictors, ranked according to $R^2$. See `?plot.regsubsets`.
 
 ```{r plot_subsets}
@@ -178,7 +178,7 @@ test_mat <- model.matrix(Salary ~ ., data = Hitters[test_lgl, ])
 as.tibble(test_mat)    # view as a `tibble` to save space
 ```
 
-Let's try to figure out what's going on in the `purrr` 
+Let's try to figure out what's going on in the `purrr`
 iteration loop below by stepping through the first two iterations:
 
 ```{r dive_into_loop}
@@ -204,7 +204,7 @@ val_errors <- purrr::map_dbl(1:19, function(.i) {
   pred  <- test_mat[, names(coefi)]%*%coefi
   mean((Hitters$Salary[test_lgl] - pred)^2)
 })
-  
+
 val_errors
 which.min(val_errors)    # the 'best' model is one containing 10 predictors
 which.min(val_errors) %>% coef(regfit_best, .)   # with these coefficients
@@ -322,7 +322,7 @@ ggplot2::qplot(x = seq_along(grid), y = grid,
                xlab = "") +
   geom_line(colour = "blue")
 
-# Note: 
+# Note:
 # alpha is the elastic net parameter, alpha in [0,1]
 # alpha = 0 selects ridge regression
 # alpha = 1 selects lasso
@@ -444,7 +444,7 @@ predict(full_fit_ridge, type = "coefficients", s = lambda_star)[1:20, ]
 ## The Lasso
 
 ```{r lasso}
-lasso_model <- glmnet::glmnet(x[train, ],  # subset training `predictor matrix` 
+lasso_model <- glmnet::glmnet(x[train, ],  # subset training `predictor matrix`
                               y[train],    # subset training `response vector`
                               alpha = 1,       # now alpha = 1; lasso
                               lambda = grid)   # same lambda search grid
@@ -478,7 +478,7 @@ lasso_coeffs
 lasso_coeffs %>%
   magrittr::extract(. != 0)
 ```
- 
+
 
 
 -------------------------------

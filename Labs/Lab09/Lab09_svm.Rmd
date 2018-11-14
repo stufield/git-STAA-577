@@ -3,7 +3,7 @@ title: 'STAA 577: Laboratory Nine </br> `tidyverse` version'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
-  html_notebook: 
+  html_notebook:
     code_folding: show
     number_sections: yes
     toc: yes
@@ -12,7 +12,7 @@ output:
 ratio: '9:16'
 tables: yes
 fontsize: 12pt
-editor_options: 
+editor_options:
   chunk_output_type: inline
 ---
 
@@ -71,7 +71,7 @@ sim_data <- matrix(rnorm(20 * 2), ncol = 2) %>%  #    20x2 matrix of random gaus
 sim_data
 
 
-sim_data %>% 
+sim_data %>%
   ggplot(aes(x = F2, y = F1, colour = y)) +   # flip axes to match SVM plot method; F2 on `x`
   geom_point(alpha = 0.5, size = 4) +
   scale_colour_manual(values = c("blue", "red")) +
@@ -104,7 +104,7 @@ sum((svmfit1$coefs)^2)
 ```
 
 ### Challenge Exercise
-The plots above and below were generated via the S3 plot method for objects 
+The plots above and below were generated via the S3 plot method for objects
 of class `svm` written in `base R` plotting. Create your own `S3 ggplot method`
 for class `svm` that produces a similar plot using `ggplot` style graphics.
 **Hint**: it should be called `ggplot.svm` and is invoked via a call like this:
@@ -172,9 +172,9 @@ best_pred_test_df <- data.frame(
   true_class      = sim_test$y,
   predicted_class = predict(bestmod, newdata = sim_test)
 )
-best_pred_test_df %>% 
+best_pred_test_df %>%
   yardstick::conf_mat(truth = true_class, estimate = predicted_class)
-best_pred_test_df %>% 
+best_pred_test_df %>%
   yardstick::accuracy(truth = true_class, estimate = predicted_class)
 
 # Fit and test using cost of constraint violation = 0.01
@@ -184,9 +184,9 @@ constraint_pred_test_df <- data.frame(
   true_class      = sim_test$y,
   predicted_class = predict(svmfit3, newdata = sim_test)
 )
-constraint_pred_test_df %>% 
+constraint_pred_test_df %>%
   yardstick::conf_mat(truth = true_class, estimate = predicted_class)
-constraint_pred_test_df %>% 
+constraint_pred_test_df %>%
   yardstick::accuracy(truth = true_class, estimate = predicted_class)
 ```
 
@@ -199,7 +199,7 @@ constraint_pred_test_df %>%
 # Linearly Separable Data
 
 ```{r svm_linearly_separable_data_set}
-# simulate again -> greater separation between classes 
+# simulate again -> greater separation between classes
 # such that they can be separated by the linear hyperplane
 set.seed(1)
 linsep_data <- matrix(rnorm(20 * 2), ncol = 2) %>%
@@ -213,7 +213,7 @@ linsep_data <- matrix(rnorm(20 * 2), ncol = 2) %>%
 linsep_data
 
 
-linsep_data %>% 
+linsep_data %>%
   ggplot(aes(x = F2, y = F1, colour = y)) +
   geom_point(alpha = 0.5, size = 4) +
   scale_colour_manual(values = c("blue", "red")) +
@@ -249,7 +249,7 @@ Simulate more data, this time a 10x sized data set:
 ```{r sim_data2}
 # Create data set
 set.seed(1)
-sim_data200 <- matrix(rnorm(200 * 2), ncol = 2) %>% 
+sim_data200 <- matrix(rnorm(200 * 2), ncol = 2) %>%
   data.frame() %>%                           # convert to data frame
   magrittr::set_names(c("F1", "F2")) %>%     # name 2 features F1 & F2
   dplyr::mutate(id = dplyr::row_number()) %>%    # add index for sample ids
@@ -257,7 +257,7 @@ sim_data200 <- matrix(rnorm(200 * 2), ncol = 2) %>%
   dplyr::mutate(F1 = dplyr::case_when(                    # For F1
                        id <= 100 ~ F1 + 2,               # 1:100 -> bump +2
                        (id > 100 & id <= 150) ~ F1 - 2, # 101:150 -> bump -2
-                       TRUE ~ F1                          # 151:200 -> bump 0 
+                       TRUE ~ F1                          # 151:200 -> bump 0
                       ),
                 F2 = dplyr::case_when(
                        id <= 100 ~ F2 + 2,
@@ -268,7 +268,7 @@ sim_data200 <- matrix(rnorm(200 * 2), ncol = 2) %>%
   tibble::as.tibble() %>%             # convert to tibble
   identity()                          # similar trick as `NULL` in ggplots
 
-sim_data200 %>% 
+sim_data200 %>%
   ggplot(aes(x = F2, y = F1, colour = y)) +
   geom_point(alpha = 0.5, size = 4) +
   scale_colour_manual(values = c("blue", "red")) +
@@ -287,11 +287,11 @@ sim_data200 %>%
 
 ```{r SVM2}
 # Set up training/test data using form from `Lab08`
-svm_train <- sim_data200 %>% 
+svm_train <- sim_data200 %>%
   dplyr::sample_frac(0.5)
 
-svm_test <- sim_data200 %>% 
-  dplyr::anti_join(svm_train, by = "id") %>% 
+svm_test <- sim_data200 %>%
+  dplyr::anti_join(svm_train, by = "id") %>%
   dplyr::select(-id)
 
 svm_train %<>% dplyr::select(-id)
@@ -328,9 +328,9 @@ tuned_svm_df <- data.frame(
   # THIS IS A DIABOLICAL EDGE CASE; but on that arises when using `predict`
 )
 
-tuned_svm_df %>% 
+tuned_svm_df %>%
   yardstick::conf_mat(truth = true_class, estimate = predicted_class)
-tuned_svm_df %>% 
+tuned_svm_df %>%
   yardstick::accuracy(truth = true_class, estimate = predicted_class) -> acc
 acc
 ```
@@ -346,8 +346,8 @@ Typically class predictions are generated for a given probability cutoff, typica
 performance of a classifier for *all possible cutoffs*. With *sensitivity* in
 [0, 1] and *1-specificity* also in [0,1], the total plotting area is 1.0, and
 the "area under the curve" (AUC) can be used as a performance metric. Below
-we use the `pROC` package to generate a ROC curve for the optimal SVM, with 
-$\gamma = 2$ and `cost = 1`. 
+we use the `pROC` package to generate a ROC curve for the optimal SVM, with
+$\gamma = 2$ and `cost = 1`.
 
 ```{r roc, message = FALSE, warning = FALSE, fig.width = 5, fig.height = 5}
 # to obtain class probabilities rather than
@@ -357,7 +357,7 @@ svm_optimal <- e1071::svm(y ~ ., data = svm_train, kernel = "radial",
 
 # These "probabilities" are actually ratios
 train_prob <- predict(svm_optimal, newdata = svm_train,
-                      decision.values = TRUE) %>% 
+                      decision.values = TRUE) %>%
   attributes() %>%                  # prob ratios are "hidden" in the attributes
   purrr::pluck("decision.values") %>%   # in a list element called `decision.values`
   as.numeric()                      # in a nx1 matrix; we need a vector
@@ -369,7 +369,7 @@ roc_train <- pROC::roc(response = svm_train$y,
 pROC::auc(roc_train)               # AUC
 
 # ROC curve via S3 plot method
-roc_train %>% 
+roc_train %>%
   plot(col = "navy",
        main = "Training (blue)\n Test (red)",
        print.thres = c(0.3, 0.5, 0.8),  # 3 arbitrarily chosen cutoffs
@@ -378,9 +378,9 @@ roc_train %>%
        print.thres.pattern = "cut = %.2f (Spec = %.2f, Sens = %.2f)")
 
 test_prob <- predict(svm_optimal, newdata = svm_test,
-                     decision.values = TRUE) %>% 
+                     decision.values = TRUE) %>%
   attributes() %>%
-  purrr::pluck("decision.values") %>% 
+  purrr::pluck("decision.values") %>%
   as.numeric()
 
 roc_test <- pROC::roc(response = svm_test$y,
@@ -389,7 +389,7 @@ roc_test <- pROC::roc(response = svm_test$y,
 
 pROC::auc(roc_test)               # AUC
 
-roc_test %>% 
+roc_test %>%
   plot(col = "darkred",            # red is test ROC
        add = TRUE,                 # add to existing plot; navy = training
        legacy.axes = TRUE)
@@ -414,13 +414,13 @@ sim_data250 <- matrix(rnorm(50 * 2), ncol = 2) %>%
   # must first remove the `id` column
   rbind(dplyr::select(sim_data200, -id)) %>%  # strips factor levels from `y`; converts -> character
   dplyr::mutate(y = factor(y)) %>%  # must refactor in the new `0` class
-  tibble::as.tibble() 
+  tibble::as.tibble()
 
 sim_data250
 
 # Plot and see the newly generated `0` class in purple
 # Original data from sim_data200 remains same (blue/red dots)
-sim_data250 %>% 
+sim_data250 %>%
   ggplot(aes(x = F2, y = F1, colour = y)) +
   geom_point(alpha = 0.5, size = 4) +
   scale_colour_manual(values = c("purple", "blue", "red")) +
@@ -447,21 +447,22 @@ plot(svm_3class, sim_data250)
 ```{r ggroc, eval = FALSE}
 ggroc <- function(roc, showAUC = TRUE, interval = 0.2,
                   breaks = seq(0, 1, interval)) {
-  if ( !inherits(roc), "roc"))
-    simpleError("Please provide roc object from `pROC` package")
+  if ( !inherits(roc, "roc") ) {
+    simpleError("Please provide roc object from `pROC` package.")
+  }
   plotx <- rev(roc$specificities)
   ploty <- rev(roc$sensitivities)
-  
+
   ggplot(NULL, aes(x = plotx, y = ploty)) +
-    geom_segment(aes(x = 0, y = 1, xend = 1,yend = 0), alpha = 0.5) + 
+    geom_segment(aes(x = 0, y = 1, xend = 1,yend = 0), alpha = 0.5) +
     geom_step() +
     scale_x_reverse(name = "Specificity",limits = c(1, 0),
-                    breaks = breaks, expand = c(0.001, 0.001)) + 
+                    breaks = breaks, expand = c(0.001, 0.001)) +
     scale_y_continuous(name = "Sensitivity", limits = c(0, 1),
                        breaks = breaks, expand = c(0.001, 0.001)) +
     theme(axis.ticks = element_line(color = "grey80")) +
-    coord_equal() + 
-    annotate("text", x = interval/2, y = interval/2, vjust = 0,
+    coord_equal() +
+    annotate("text", x = interval / 2, y = interval / 2, vjust = 0,
              label = paste("AUC =", sprintf("%.3f", roc$auc)))
 }
 ```

@@ -3,7 +3,7 @@ title: 'STAA 577: Laboratory Seven (II) </br> `tidyverse` version'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
-  html_notebook: 
+  html_notebook:
     code_folding: show
     number_sections: yes
     toc: yes
@@ -56,7 +56,7 @@ bs_pred      <- predict(b_spline_fit,
                         newdata = data.frame(age = age_grid),
                         se = TRUE)
 
-# df = (number of degrees of freedom) locates knots 
+# df = (number of degrees of freedom) locates knots
 # based on uniform percentiles of the data
 dim(bs(age, knots = c(25, 40, 60)))
 dim(bs(age, df = 6))
@@ -77,7 +77,7 @@ gg_df <- data.frame(      # gather relevant vectors into a data frame
   age_grid = age_grid,
   bs_fit   = bs_pred$fit,
   ns_fit   = ns_pred$fit
-  ) %>% 
+  ) %>%
   dplyr::mutate(bs_upper = bs_fit + 2 * bs_pred$se.fit,  # calc 2se
                 bs_lower = bs_fit - 2 * bs_pred$se.fit) %>%  # calc 2se
   tibble::as.tibble()
@@ -102,7 +102,7 @@ data.frame(age = age, wage = wage) %>%
 
 
 ## Smoothing Splines
-  
+
 ```{r smoothing_splines}
 # Fit a smoothing spline
 smooth_fit <- stats::smooth.spline(age, wage, df = 16)
@@ -116,15 +116,15 @@ smooth_df <- data.frame(
   x         = smooth_fit$x,
   smooth    = smooth_fit$y,
   smooth_cv = smooth_fit_cv$y
-  ) %>% 
-  tidyr::gather(key = "fit", value = "predicted", -x) %>% 
+  ) %>%
+  tidyr::gather(key = "fit", value = "predicted", -x) %>%
   tibble::as.tibble()
 
 smooth_df    # quickly view the plotting data
 
 full_df <- data.frame(age = age, wage = wage)
 
-full_df %>% 
+full_df %>%
   ggplot(aes(x = age, y = wage)) +
   geom_point(alpha = 0.25) +
   ggtitle("Smoothing Spline") +
@@ -188,18 +188,18 @@ anova(gam_m1, gam_m2, gam_m3, test = "F")
 # ALSO, THEY SAY M2 IS PREFERRED, THEN PROCEED TO SUMMARIZE M3, WHY?
 summary(gam_m3)
 
-# Don't forget about `broom::tidy` 
+# Don't forget about `broom::tidy()`
 # Easily and consistently summarize model output
 broom::tidy(gam_m3)
 
-# Use the built-in S3 `Gam` method to the `predict` generic
+# Use the built-in S3 `Gam` method to the `predict()` generic
 # to make predictions on the training set & calc MSE
 # The `predict()` generic lives in stats pkg
 # It is not necessary to select the model covariates;
 # it will happen internally inside `predict`
 # But it can be a good practice anyhow, to ensure you're not accidentally cheating
 # Below use `dplyr::select` to keep only the predictors in the "new data"
-pred_wage <- predict(gam_m2, newdata = dplyr::select(Wage, year, age, education))  
+pred_wage <- predict(gam_m2, newdata = dplyr::select(Wage, year, age, education))
 mse   <- mean((wage - pred_wage)^2)   # calculate MSE
 mse
 ```

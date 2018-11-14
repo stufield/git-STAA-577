@@ -74,7 +74,7 @@ You can think about the following sequence of actions:
     3. start car
     4. drive to school
     5. park.
-  
+
 Expressed as a set of nested functions in R `pseudocode` this would look like:
 
 ```{r, eval = FALSE}
@@ -271,10 +271,10 @@ flights %>% select(-(year:day))
 
 ## Select matching `dplyr::select`
 ```{r}
-flights %>% select(contains("dep"), 
+flights %>% select(contains("dep"),
                    contains("arr"))
 
-flights %>% select(starts_with("dep"), 
+flights %>% select(starts_with("dep"),
                    starts_with("arr"))
 ```
 
@@ -355,7 +355,7 @@ flights %>% sample_frac(0.001)
 
 ## Summary via `dplyr::summarise`
 ```{r}
-flights %>% mutate(date = paste(month, day, year, sep = "/") %>% mdy()) %>% 
+flights %>% mutate(date = paste(month, day, year, sep = "/") %>% mdy()) %>%
    summarize(n(), min(date), max(date))
 ```
 
@@ -378,7 +378,7 @@ flights %>%
 
 # Plotting
 
-No data wrangling and/or data exploration is complete without at least some visual exploration of the data. Asking yourself: what do I have here? how is my data (particularly my class variable or response variable) distributed? Are there any missing values? Negative values? 
+No data wrangling and/or data exploration is complete without at least some visual exploration of the data. Asking yourself: what do I have here? how is my data (particularly my class variable or response variable) distributed? Are there any missing values? Negative values?
 
 ```{r}
 par(mfrow = c(2, 2))                             # make 2x2 grid for plots
@@ -401,9 +401,9 @@ thm <- theme_bw() +
   )
 theme_set(thm)
 
-iris %>% 
+iris %>%
   tidyr::gather(key = "Feature", value = "cm", -Species) %>%
-  mutate(Feature = gsub("\\.", " ", Feature)) %>% 
+  mutate(Feature = gsub("\\.", " ", Feature)) %>%
   ggplot(aes(y = cm, x = Species, fill = Species)) +
   geom_boxplot(color = "#1F3552", alpha = 0.75, size = 0.5) +
   scale_x_discrete(name = "Species") +
@@ -473,7 +473,7 @@ flights %>%
 
 
 
-# Merging Data 
+# Merging Data
 
 No data wrangling tutorial would be complete without a section on merging data. This will happen often. Data will come to you, perhaps from various sources, and you must combine the records (cases, samples, rows, etc.) based on a common indicator variable, usually some sort of *key* identifier variable (e.g. a name, a patient ID, etc.).
 
@@ -716,7 +716,7 @@ There are many *negative* departure time values (early!), which stop us from plo
 
 ```{r}
 flightsw %>%
-  filter(dep_delay > 0)  %>% 
+  filter(dep_delay > 0)  %>%
   mutate(visib %<>% factor) %>%
   ggplot(aes(x = visib, y = dep_delay, group = visib)) +
   geom_boxplot(fill = "blue", color = "gray") +
@@ -751,7 +751,7 @@ Above materials are derived in part from the following sources:
 * Package Vignettes:
     + [dplyr](http://cran.r-project.org/web/packages/dplyr/vignettes/introduction.html)
     + [tidyr](http://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html)
-    
+
 * Hadley Wickham's new book:
     + [R for Data Science](http://r4ds.had.co.nz/)
 

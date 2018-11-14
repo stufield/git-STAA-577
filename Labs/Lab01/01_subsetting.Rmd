@@ -121,14 +121,14 @@ str(rbind(cbind(df1, df2), list(1, "a", 1, 1)))
   Patient    Gender          Treatment 1     Treatment 2     Treatment 3
 ---------- --------------- --------------- --------------- ---------------
   1          Male            Yes             Yes             Yes
-  2          Male            Yes             Yes             No 
+  2          Male            Yes             Yes             No
   3          Male            Yes             No              Yes
   4          Male            Yes             No              No
   5          Male            No              Yes             Yes
   6          Male            No              Yes             No
   7          Male            No              No              Yes
   8          Male            No              No              No
-  9          Female          Yes             Yes             Yes 
+  9          Female          Yes             Yes             Yes
   10         Female          Yes             Yes             No
   11         Female          Yes             No              Yes
   12         Female          Yes             No              No
@@ -140,7 +140,7 @@ str(rbind(cbind(df1, df2), list(1, "a", 1, 1)))
     2. Why does the following fail, i.e. should fail IMHO?
 ```{r grow_df, error = TRUE}
 df <- data.frame(x = 1:3, group = factor(c("A","B","C")))
-rbind(df, c(4, "D")) 
+rbind(df, c(4, "D"))
 ```
 
 
@@ -218,7 +218,7 @@ In general there are 6 different data types that can be used to subset:
       * Empty / NULL
       * Zero
       * Character values (names)
-   
+
 
 # Subsetting Vectors
 
@@ -667,7 +667,7 @@ str(x[1, , drop = FALSE])
 
 # Preserving vs Simplifying Subsets
 
-Type         Simplifying              Preserving   
+Type         Simplifying              Preserving
 -----------  ---------------          ------------
 Vector	     `x[[1]]`	              `x[1]`
 List	        `x[[1]]`                `x[1]`
@@ -823,7 +823,7 @@ grades <- data.frame(
       * the student's passing status the class (logical vector)
          + TRUE for a grade of A, B, or C
          + FALSE for a grade of D or F
-         
+
 These changes should not be hard coded, i.e. if you were given a **new** data frame with new values, your code should still produce the correct answer.
 
 

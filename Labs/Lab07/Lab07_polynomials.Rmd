@@ -3,7 +3,7 @@ title: 'STAA 577: Laboratory Seven (I) </br> `tidyverse` version'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
-  html_notebook: 
+  html_notebook:
     code_folding: show
     number_sections: yes
     toc: yes
@@ -12,7 +12,7 @@ output:
 ratio: '9:16'
 tables: yes
 fontsize: 12pt
-editor_options: 
+editor_options:
   chunk_output_type: inline
 ---
 
@@ -90,19 +90,19 @@ lo        <- fit_preds$fit - 2 * fit_preds$se.fit
 df_fit <- data.frame(     fit = fit_preds$fit,
                      age_grid = age_grid,
                            up = up,
-                           lo = lo) 
+                           lo = lo)
 
 # pass `x` and `y` as df to ggplot
 data.frame(age = age, wage = wage) %>%
   ggplot(aes(x = age, y = wage)) +
   geom_point(alpha = 0.25) +
-  labs(title = "Degree-4 Polynomial") +  
+  labs(title = "Degree-4 Polynomial") +
   geom_line(data = df_fit, aes(x = age_grid, y = fit), col = "blue") +
   geom_line(data = df_fit, aes(x = age_grid, y = up),
             col = "red", linetype = "dashed") +
   geom_line(data = df_fit, aes(x = age_grid, y = lo),
             col = "red", linetype = "dashed") +
-  NULL        # neat trick that allows commenting layer lines above 
+  NULL        # neat trick that allows commenting layer lines above
               # without having to manage the `+` signs between layers
 ```
 
@@ -168,7 +168,7 @@ lr_fit <- data.frame(
   pfit  = exp(LRpreds$fit) / (1 + exp(LRpreds$fit)),
   upper = exp(upper) / (1 + exp(upper)),
   lower = exp(lower) / (1 + exp(lower))
-  ) %>% 
+  ) %>%
   tibble::as.tibble()
 
 # STU: check on this; why is this here? doesn't do anything
@@ -183,7 +183,7 @@ data.frame(age = age, y = I(wage > 250)/5) %>%
   ylim(c(0, 0.22)) +
   geom_line(data = lr_fit, aes(x = age, y = pfit), col = "blue") +
   labs(title = "Polynomial Logistic Regression with SE",
-       y = "I(wage > 250)") +  
+       y = "I(wage > 250)") +
   geom_line(data = lr_fit, aes(x = age, y = upper),
             col = "red", linetype = "dashed") +
   geom_line(data = lr_fit, aes(x = age, y = lower),
@@ -192,7 +192,7 @@ data.frame(age = age, y = I(wage > 250)/5) %>%
 
 table(cut(age, 4))     # get no. obs per bin if split age into 4 groups
 
-stats::lm(wage ~ cut(age, 4), data = Wage) %>% 
-  summary() %>% 
+stats::lm(wage ~ cut(age, 4), data = Wage) %>%
+  summary() %>%
   coef()
 ```

@@ -54,7 +54,7 @@ table(iris$Species)  # once you know which column contains the classes, what are
 ```
 
 
-The `summary` function is a special class of generic functions (called S3) 
+The `summary` function is a special class of generic functions (called S3)
 that perform specific operations depending on the class object they are
 performing on ... in this case a `data.frame` class object.
 The default is to **summarize** the columns, reporting a different
@@ -69,12 +69,12 @@ sapply(iris[, -5], function(x)
   tapply(x, iris$Species, mean))   # feature means split by Species
 ```
 
-There is a new syntax that has become quite popular in recent years, referred 
+There is a new syntax that has become quite popular in recent years, referred
 to simply as `tidy` data analysis, spearheaded by Hadley Wickham.
 Here is how you would get to the same answer using this syntax:
 
 ```{r}
-iris %>% 
+iris %>%
   tibble::as.tibble() %>%    # make 'iris' a `tibble` data frame
   dplyr::group_by(Species) %>%
   dplyr::summarise_all(funs(mean))
@@ -122,20 +122,20 @@ purrr::walk(names(iris)[-5], function(class)  # purrr::walk() suppresses output;
 
 # Plotting via `ggplot2`
 ```{r}
-df <- iris %>% 
+df <- iris %>%
   tidyr::gather(key = "Feature", value = "cm", -Species) %>%  # re-arrange to long format
   dplyr::mutate(Feature = gsub("\\.", " ", Feature)) %>%   # remove dot in name
   tibble::as.tibble()     # make tibble for easy viewing
 
 df
 
-df %>% 
+df %>%
 ggplot(aes(y = cm, x = Species, fill = Species)) +
   geom_boxplot(color = "#1F3552", alpha = 0.75, size = 0.5) +
   scale_x_discrete(name = "Species") +
   ggtitle("Overall Title") +
   theme(plot.title = element_text(hjust = 0.5)) +
-  facet_wrap(~Feature, ncol = 2) 
+  facet_wrap(~Feature, ncol = 2)
 ```
 
 
@@ -152,13 +152,13 @@ plot(iris[, -5], col = iris$Species)
 
 
 ```{r}
-iris %>% 
+iris %>%
   ggplot(aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
     geom_point(alpha = 0.5, size = 2.5) +
     ggtitle("Title Goes Here") +
     # this is a useful trick; add `NULL` as last line
     # you then don't need to manage the `+` signs above when building the layers
-    NULL  
+    NULL
 ```
 
 
