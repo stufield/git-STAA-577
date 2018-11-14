@@ -4,11 +4,13 @@ author: "Simon Tavener & Stu Field"
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
   html_notebook:
-    toc: true
-    toc_float:
-      collapsed: false
     code_folding: show
-    number_sections: true
+    number_sections: yes
+    toc: yes
+    toc_float:
+      collapsed: no
+  pdf_document:
+    toc: yes
 ratio: '9:16'
 tables: yes
 fontsize: 12pt
@@ -120,7 +122,13 @@ data.frame(a = 1:3, b = 3:1) %>% .[[length(.)]]
 # Tibbles
 ## Modern data frames
 
-Hadley Wickham has a package that modifies data frames to be more modern, or as he calls them *surly* and *lazy*. That is they don't change variable names or types, and don't do partial matching; and they complain more (e.g. when a variable does not exist). This forces you to confront problems earlier, typically leading to cleaner, more expressive code. Tibbles also have an enhanced `print()` method which makes them easier to use with large datasets containing complex objects.
+Hadley Wickham has a package that modifies data frames to be more modern,
+or as he calls them *surly* and *lazy*. That is they don't change variable
+names or types, and don't do partial matching; and they complain more
+(e.g. when a variable does not exist). This forces you to confront problems
+earlier, typically leading to cleaner, more expressive code.
+Tibbles also have an enhanced `print()` method which makes them easier to
+use with large datasets containing complex objects.
 
 ```{r}
 class(iris)
@@ -142,7 +150,9 @@ tbl_iris[, "Species"]
 
 ## Lazy tibbles (factors)
 ```{r}
-data_frame(x = 1:3, y = c("A", "B", "C"))
+tibble(x = 1:3, y = c("A", "B", "C"))   # respects input class by default; character
+# Annoyingly, the default of `data.frame()` is stringsAsFactors = TRUE
+data.frame(x = 1:3, y = c("A", "B", "C"), stringsAsFactors = TRUE)   # character -> factor class
 ```
 
 
@@ -161,6 +171,10 @@ tbl_iris$Name           # returns NULL (with explanation!)
 tbl_iris[160, ]         # exceeded index; returns 1 row data frame of NAs
 ```
 
+```{r BadTibble4}
+head(iris$Spec)      # partial `$` match; not always a good thing!
+head(tbl_iris$Spec)  # partial `$` match complains with warning(), as it should!
+```
 
 
 ---------------------------------------------
@@ -173,10 +187,9 @@ The `dplyr` package is based on the concepts of functions as verbs that manipula
 
 Single data frame functions / verbs:
 
-* `tbl_df()`: add the tbl_df class
 * `filter()`: pick rows matching criteria
 * `slice()`: pick rows using index(es)
-* `select()`: pick columns by name
+* `select()`: pick and/or reorder columns by name
 * `pull()`: grab a column as a vector
 * `rename()`: rename specific columns
 * `arrange()`: reorder rows
@@ -278,15 +291,19 @@ flights %>% select(starts_with("dep"),
                    starts_with("arr"))
 ```
 
-## Other helpers:
-   - `current_vars`
-   - `starts_with`
-   - `ends_with`
-   - `contains`
-   - `matches`
-   - `num_range`
-   - `one_of`
-   - `everything`
+## Reorder (Move) `dplyr::select`
+```{r}
+flights %>% select(origin, everything())    # move `origin` to front
+flights %>% select(-origin, everything())   # move `origin` to back
+```
+
+
+```{r, eval = FALSE}
+# These are alternatives to the above; which may seem impossible at first
+# See below for why this works (`select()` vs `rename()`)
+flights %>% select(origin, -origin)   # move `origin` to front
+flights %>% select(-origin, origin)   # move `origin` to back
+```
 
 
 ## Using `dplyr::pull`
@@ -297,16 +314,55 @@ flights %>% pull(1) %>% head()
 flights %>% pull(-1) %>% head()
 ```
 
+
+## Other helpers:
+   - `starts_with()`
+   - `ends_with()`
+   - `contains()`
+   - `matches()`
+   - `num_range()`
+   - `one_of()`
+   - `everything()`
+   - `last_col()`
+   - The above "helpers" can be found in the new-ish `?tidyselect` package
+     which supports the `dplyr` package.
+
+
+
 ## Change column names `dplyr::rename`
 ```{r}
 flights %>% rename(tail_number = tailnum)
 ```
 
-## select() vs. rename()
+
+
+
+## `select()` vs. `rename()`
+You can do some interesting things with `dplyr::select()`, such as renaming
+*and* selecting simultaneously.
 ```{r}
-flights %>% select(tail_number = tailnum, -tailnum)
-flights %>% select(-tailnum, tail_number = tailnum)
+flights %>% select(tail_number = tailnum)
 ```
+
+
+This might be confusing, but arguments are evaluated only at the end of the
+call, and in the order of the arguments (i.e. `...`). So you can refer to 
+variables that have been removed or renamed by their original names.
+This is best seen in an example:
+
+```{r}
+# Rename tailnum -> tail_number
+# Then select the new variable `tail_number`
+# Then select all variables except `tailnum` (but referring to the original name!)
+flights %>% select(tail_number = tailnum, -tailnum)   # no rows
+# Select all variables except `tailnum`
+# Then rename tailnum -> tail_number
+# This 'adds back the variable with a new name
+# And reorders it to the final column
+flights %>% select(-tailnum, tail_number = tailnum)   # tailnum -> tail_number + move to end
+```
+
+
 
 ## Sort data `dplyr::arrange`
 ```{r}
@@ -361,15 +417,19 @@ flights %>% mutate(date = paste(month, day, year, sep = "/") %>% mdy()) %>%
 
 ## Set Groupings `dplyr::group_by`
 ```{r}
-flights %>% group_by(origin)
+# grouping parameters stored in attributes
+flights %>% group_by(origin)    # doesn't appear any different
+flights %>% class()             # pre-grouping is standard `tibble`
+flights %>% group_by(origin) %>% class()  # returned object is a new class `grouped_df`
 ```
 
-## Summarize Groups `dplyr::summarise dplyr::group_by`
+## Summarize groups with `dplyr::group_by()` + `dplyr::summarise()`
 ```{r}
+# the `lubridate` package (tidyverse) helps working with dates
 flights %>%
   group_by(origin) %>%
-  mutate(date = paste(month, day, year, sep="/") %>% mdy()) %>%
-  summarize(n(), min(date), max(date))
+  mutate(date = paste(month, day, year, sep = "/") %>% lubridate::mdy()) %>%
+  summarize(n = n(), min = min(date), median = median(date), max = max(date))
 ```
 
 
@@ -385,7 +445,7 @@ par(mfrow = c(2, 2))                             # make 2x2 grid for plots
 par(mgp = c(2, 0.75, 0), mar = c(3, 4, 3, 1))    # graphics settings; squeeze margins
 lapply(names(iris)[-5], function(class)
    boxplot(split(iris[[class]], iris$Species), main = class, col = 1:3)) %>%
-   invisible   # pipe to invisible to suppress output
+   invisible()   # pipe to invisible to suppress output
 ```
 
 ## The same via <img src="images/ggplot2.png" class="title-hex">
@@ -712,7 +772,17 @@ flightsw %>%
 ```
 
 
-There are many *negative* departure time values (early!), which stop us from plotting the y-axis on a log-scale (which might be more visually appealing) ... let's boxplot but remove them first:
+Notice a few things:
+
+  * There are many *negative* departure time values (early!)
+  * The departure time distribution is heavily skewed towards zero 
+  * This makes sense since delays are much more likely than early departures,
+    which means the **many** points overlap near zero.
+  * These values stop us from plotting the y-axis on a log-scale (which might 
+    give us a better view of the data), 
+  * A boxplot (see [here](https://towardsdatascience.com/understanding-boxplots-5e2df7bcbd51) 
+    about boxplots) might give us a better representation of the data .
+  * Let's remove the negative departure times and replot as a *boxplot*:
 
 ```{r}
 flightsw %>%
@@ -733,9 +803,13 @@ flightsw %>%
 
 # More Exercises
 
-1. Check some of the other weather variables (e.g. `temp`, `wind_speed`, `etc`) and see if you can find any relationship between them and departure delay (`dep_delay`).
+1. Check some of the other weather variables (e.g. `temp`, `wind_speed`, `etc`)
+and see if you can find any relationship between them and departure
+delay (`dep_delay`).
 
-2. Merge the `flights` data with the `planes` data set (pay attention to what columns are being used for the join). Are older planes more likely to be delayed? What about planes from Airbus vs Boeing vs Embraer?
+2. Merge the `flights` data with the `planes` data set (pay attention to
+what columns are being used for the join). Are older planes more likely
+to be delayed? What about planes from Airbus vs Boeing vs Embraer?
 
 
 
