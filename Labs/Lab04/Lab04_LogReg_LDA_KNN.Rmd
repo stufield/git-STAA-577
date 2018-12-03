@@ -1,5 +1,5 @@
 ---
-title: 'STAA 577: Laboratory Four </br> `tidyverse` version'
+title: 'STAA 577: Laboratory Four </br> Classification (`tidyverse`)'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
@@ -15,8 +15,12 @@ fontsize: 12pt
 ---
 
 
-# Setup
 
+-----------------------
+
+
+
+### Load necessary libraries {-}
 ```{r setup, message = FALSE, warning = FALSE}
 options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 library(magrittr)     # pipes
@@ -25,18 +29,14 @@ library(dplyr)        # data wrangling
 library(purrr)        # iteration
 library(ggplot2)      # tidy plotting
 library(broom)        # summarize model objects uniformly
-library(class)        # KNN
-library(MASS)         # qda()
+library(class)        # knn()
+library(MASS)         # lda() and qda()
 library(ISLR)         # Smarket data set
 ```
 
-
-
 -----------------------------
 
-
-
-# The `Smarket` Data Set: S & P Stock Market
+# S&P Stock Market (Smarket)
 ```{r Stock_Market_Data, error = TRUE}
 class(Smarket)                           # currently data frame
 Smarket %<>% as.tibble()                 # convert to `tibble` object
@@ -46,7 +46,7 @@ dim(Smarket)                             # dimensions of data
 Smarket                                  # echo Smarket (top 10 rows)
 summary(Smarket)                         # S3 summary method for class `data.frame`
 pairs(Smarket)                           # pairs plot of 9-choose-2 combinations
-cor(Smarket)                             # Error; non-numerics in 'Direction'
+# cor(Smarket)                           # Error; non-numerics in 'Direction'
 class(Smarket$Direction)                 # Factor
 cor(dplyr::select(Smarket, -Direction))  # remove 'Direction' and retry
 Smarket %>%
@@ -58,48 +58,56 @@ Smarket %>%
 
 --------------------------------
 
+# Logistic regression
 
-# Logistic Regression I
+## Using the entire data set
 ```{r Logistic_regression}
-glm.fit <- stats::glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 +
+glm_fit <- stats::glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 +
                       Lag5 + Volume, data = Smarket, family = "binomial")
-class(glm.fit)
-summary(glm.fit)       # Coefficients for each feature
-coef(glm.fit)          # Statistical summary for each feature
-sum_tbl <- broom::tidy(glm.fit)   # use `broom` to easily summarize model objects
-sum_tbl                           # take a look
-sum_tbl %>% dplyr::pull(p.value)  # pull vector of P-values for each covariate
+class(glm_fit)
+summary(glm_fit)                  # Statistical summary
+coef(glm_fit)                     # Coefficients of the fit
+sum_tbl <- broom::tidy(glm_fit)   # use `broom` to summarize
+sum_tbl
+sum_tbl %>% dplyr::pull(p.value)  # `pull` vector of p-values for each covariate
 
-# make predictions (training only)
-glm.probs <- predict(glm.fit, type = "response")    # S3 predict method
-class(glm.probs)
-glm.probs %>% head(10)
+# Make predictions (training only)
+glm_probs <- predict(glm_fit, type = "response")    # S3 predict method
+class(glm_probs)
+glm_probs %>% head(10)
 Smarket$Direction %>% head(10)
 contrasts(Smarket$Direction)
-glm.pred <- ifelse(glm.probs > 0.5, "Up", "Down")  # predict @ 0.5 cutoff
+glm_pred <- ifelse(glm_probs > 0.5, "Up", "Down")  # predict @ 0.5 cutoff
 
-# confusion matrix
-cmat <- table(truth = Smarket$Direction, pred = glm.pred)
+# Confusion matrix
+cmat <- table(truth = Smarket$Direction, pred = glm_pred)
 addmargins(cmat)
 
-# accuracy (training); diagonal of confusion matrix
+# Accuracy (training)
 sum(diag(cmat)) / sum(cmat)
 
-# alternative method; sanity check
-mean(glm.pred == Smarket$Direction)  # proportion predicted correctly
+# Alternative method (sanity check)
+# note: the mean of a boolean vector is the proportion of TRUE
+# b/c TRUE = 1; FALSE = 0
+mean(glm_pred == Smarket$Direction)  # proportion predicted correctly
 ```
 
 
-## A note about confusion matrices
+### Confusion matrices
 There are various (arbitrary!) ways to present prediction performance summaries,
 none more `correct` than any other. For consistency, this course will use the
 default construction below, where the `truth` standard is at left
 and the predictions along the top. Negative predictions (i.e. `controls`) occur
-first, followed by positive predictions. With this construction `accuracy` is
-diagonal sum divided by the total sum, `specificity` is determined
-by the proportion of correct *negative* predictions in the first row, and
-`sensitivity` is determined by the proportion of the correct *positive* predictions
-in the second row.
+first, followed by positive predictions. With this construction:
+
+* `accuracy` is diagonal sum divided by the total sum
+* `specificity` is determined by the proportion of correct *negative*
+  predictions in the first row
+* `sensitivity` is determined by the proportion of the correct *positive*
+  predictions in the second row
+
+
+
 ```{r confusion, echo = FALSE}
 c("TN", "FN", "FP", "TP") %>%
   matrix(ncol = 2, dimnames = list(Truth = c("neg", "pos"),
@@ -107,170 +115,188 @@ c("TN", "FN", "FP", "TP") %>%
   as.table()
 ```
 
+There are other predictive measures (e.g. negative predictive value (NPV),
+and PPV) that become more important depending on the problem. For a complete
+guide see
+[confusion matrix](https://en.wikipedia.org/wiki/Confusion_matrix).
 
 ---------------------------
 
-# Logistic Regression II
+
+
+
+## Using a training (sub)set
+
 ```{r Logistic_regression2, error = TRUE}
-# training on marker prior to 2005
+# Training on data prior to 2005
 train <- dplyr::filter(Smarket, Year < 2005)
 
-# test on data post-2004
+# Test on data post-2004
 test  <- dplyr::filter(Smarket, Year >= 2005)
 
-# perform sanity checks
+# Sanity checks
 nrow(train)
 nrow(test)
 nrow(train) + nrow(test) == nrow(Smarket)  # sanity check
 head(test$Direction)
 
-# fit LR model on training set
-glm.probs <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume,
-                 data = train, family = "binomial")  %>%  # fit LR model
+# Fit LR model to training set
+# and immediately make predictions via `%>%`
+glm_probs <- stats::glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume,
+                        data = train, family = "binomial")  %>%  # fit LR model
   predict(newdata = test, type = "response")     # predict on test set
 
-# recast predictions
+# Recast predictions
 cutoff   <- 0.5
-glm.pred <- ifelse(glm.probs > cutoff, "Up", "Down")
+glm_pred <- ifelse(glm_probs > cutoff, "Up", "Down")
 
-# confusion matrix
-cmat <- table(truth = test$Direction, pred = glm.pred)
+# Confusion matrix
+cmat <- table(truth = test$Direction, pred = glm_pred)
 addmargins(cmat)
 
-# accuracy
+# Accuracy
 acc <- sum(diag(cmat)) / sum(cmat)
 acc
 
-# sensitivity (predicting Up)
+# Sensitivity (predicting Up)
 sens <- prop.table(cmat["Up", ])[2]
 sens
 
-# specificity (predicting Down)
+# Specificity (predicting Down)
 spec <- prop.table(cmat["Down", ])[1]
 spec
 
-# sanity checks
-mean(glm.pred == test$Direction) == acc
-mean(glm.pred != test$Direction) == 1 - acc  # machine precision error!
+# Sanity checks
+mean(glm_pred == test$Direction) == acc      # recall proportion trick!
+mean(glm_pred != test$Direction) == 1 - acc  # machine precision error!
 
-# try dplyr::near
-dplyr::near(mean(glm.pred != test$Direction), 1 - acc)
+# Try dplyr::near; safer than `==` when floating point errors can bite
+dplyr::near(mean(glm_pred != test$Direction), 1 - acc)
 ```
-
 
 ---------------------------
 
-
-# Logistic regression III
+## Using a subset of predictors
 ```{r Logistic_regression3}
-# fit using only 2 predictors; Lag1 and Lag2
-glm.fit <- glm(Direction ~ Lag1 + Lag2 ,
-               data = train,
-               family = "binomial")
-glm.probs <- predict(glm.fit, newdata = test, type = "response")
+# Fit using only 2 predictors; Lag1 and Lag2
+glm_fit2 <- stats::glm(Direction ~ Lag1 + Lag2 ,
+                       data = train,
+                       family = "binomial")
+glm_probs <- predict(glm_fit2, newdata = test, type = "response")
 cutoff    <- 0.5
-glm.pred  <- ifelse(glm.probs > cutoff, "Up", "Down")
+glm_pred  <- ifelse(glm_probs > cutoff, "Up", "Down")
 
-# confusion matrix
-cmat <- table(truth = test$Direction, pred = glm.pred)
+# Confusion matrix
+cmat <- table(truth = test$Direction, pred = glm_pred)
 addmargins(cmat)
 
-# accuracy
+# Accuracy
 acc <- sum(diag(cmat)) / sum(cmat)
 acc
 
-# sanity check
-mean(glm.pred == test$Direction) == acc
+# Sanity check
+mean(glm_pred == test$Direction) == acc
 
-# sensitivity (predicting Up)
+# Sensitivity (predicting Up)
 sens <- prop.table(cmat["Up", ])[2]
 sens
 
-# specificity (predicting Down)
+# Specificity (predicting Down)
 spec <- prop.table(cmat["Down", ])[1]
 spec
 
-# Make predictions of very specific values
-# of Lag1 and Lag2 also possible
-predict(glm.fit,
+# Make predictions for specific values of Lag1 and Lag2 also possible
+predict(glm_fit2,
         newdata = data.frame(Lag1 = c(1.2, 1.5),
                              Lag2 = c(1.1, -0.8)),
         type = "response")
 ```
 
-
 ----------------------
 
 
+# Discriminant Analyses
 
-# Linear Discriminant Analysis (LDA)
+
+## Linear Discriminant Analysis (LDA)
+
 ```{r LDA}
-lda.fit <- MASS::lda(Direction ~ Lag1 + Lag2, data = train)
-class(lda.fit)
-lda.fit
-plot(lda.fit)                  # S3 plot method; histogram
-lda.pred <- predict(lda.fit, newdata = test)   # S3 predict method
-head(lda.pred$posterior, 10)   # posterior probabilities each class
-lda.class <- lda.pred$class    # predicted class
+lda_fit <- MASS::lda(Direction ~ Lag1 + Lag2, data = train)
+class(lda_fit)
+lda_fit
+plot(lda_fit, type = "hist", col = "grey")     # S3 plot method; histogram/density/both
+lda_pred <- predict(lda_fit, newdata = test)   # S3 predict method
+head(lda_pred$x, 20)           # scores each class
+max(lda_pred$x)                # maximum score
+min(lda_pred$x)                # minimum score
+head(lda_pred$posterior, 20)   # posterior probabilities each class
+head(lda_pred$class, 20)       # predicted class
+lda_class <- lda_pred$class    # predicted class
 
-# confusion matrix
-cmat <- table(truth = test$Direction, pred = lda.class)
+# Confusion matrix
+cmat <- table(truth = test$Direction, pred = lda_class)
 addmargins(cmat)
 
-# accuracy
+# Accuracy
 acc <- sum(diag(cmat)) / sum(cmat)
 acc
 
-# sanity check
-mean(lda.class == test$Direction) == acc
+# Sanity check
+mean(lda_class == test$Direction) == acc
 
-# sensitivity (predicting Up)
+# Sensitivity (predicting Up)
 sens <- prop.table(cmat["Up", ])[2]
 sens
 
-# specificity (predicting Down)
+# Specificity (predicting Down)
 spec <- prop.table(cmat["Down", ])[1]
 spec
 
-sum(lda.pred$posterior[, "Down"] >= 0.5)  # compare to addmargins() above
-sum(lda.pred$posterior[, "Down"] < 0.5)   # compare to addmargins() above
-sum(lda.pred$posterior[, "Down"] > 0.9)   # none are predicted at 0.9 or above
+# Specify decision criteria
+sum(lda_pred$posterior[, "Down"] >= 0.5)  # compare to addmargins() above
+sum(lda_pred$posterior[, "Down"] < 0.5)   # compare to addmargins() above
+sum(lda_pred$posterior[, "Down"] > 0.9)   # none are predicted at 0.9 or above
 ```
+
 
 -------------------
 
 
-# Quadratic Discriminant Analysis (QDA)
+## Quadratic Discriminant Analysis (QDA)
 ```{r QDA}
-qda.fit <- qda(Direction ~ Lag1 + Lag2, data = train)
-qda.fit
-qda.class <- predict(qda.fit, newdata = test)$class
+qda_fit <- qda(Direction ~ Lag1 + Lag2, data = train)
+qda_fit
+qda_class <- predict(qda_fit, newdata = test)$class
 
-# confusion matrix
-cmat <- table(truth = test$Direction, pred = qda.class)
+# Confusion matrix
+cmat <- table(truth = test$Direction, pred = qda_class)
 addmargins(cmat)
 
-# accuracy
+# Accuracy
 acc <- sum(diag(cmat)) / sum(cmat)
 acc
 
-# sanity check
-mean(qda.class == test$Direction) == acc
+# Sanity check
+mean(qda_class == test$Direction) == acc
 
-# sensitivity (predicting Up)
+# Sensitivity (predicting Up)
 sens <- prop.table(cmat["Up", ])[2]
 sens
 
-# specificity (predicting Down)
+# Specificity (predicting Down)
 spec <- prop.table(cmat["Down", ])[1]
 spec
 ```
+
 
 
 -----------------------
 
 
+
 # KNN: K-Nearest Neighbors
+
+## K = 1
 ```{r KNN}
 training_classes <- train$Direction
 train %<>% dplyr::select(Lag1, Lag2)
@@ -278,44 +304,60 @@ test_classes <- test$Direction
 test  %<>% dplyr::select(Lag1, Lag2)
 set.seed(1)
 
-# very small neighborhood of k = 1
+# Smallest neighborhood, K = 1
 knn_pred_class <- class::knn(train, test, training_classes, k = 1)
 
-# confusion matrix
+# Confusion matrix
 cmat <- table(truth = test_classes, pred = knn_pred_class)
 addmargins(cmat)
 
-# accuracy: Really Bad for K = 1!
+# Accuracy: Really bad for K = 1!
 acc <- sum(diag(cmat)) / sum(cmat)    # coin flip!
 acc
 
-# sanity check
+# Sanity check
 mean(knn_pred_class == test_classes) == acc
 
-# sensitivity (predicting Up)
+# Sensitivity (predicting Up)
 sens <- prop.table(cmat["Up", ])[2]
 sens
 
-# specificity (predicting Down)
+# Specificity (predicting Down)
 spec <- prop.table(cmat["Down", ])[1]
 spec
 ```
 
+## K = 1, 2, ..., 10
 
-## Let's retry with varying neighborhood size.
-We will iterate over `1:10` for values of *k* using `purrr::map_df`.
+Iterate over `K = 1, 2, ..., 10` using `purrr::map_df()`.
+
 ```{r varyK}
 purrr::map_df(1:10, function(x) {
   cmat <- class::knn(train, test, training_classes, k = x) %>%
     table(truth = test_classes, pred = .)
-  data.frame(K    = x,
-             acc  = sum(diag(cmat)) / sum(cmat),
-             sens = prop.table(cmat["Up", ])[2],
-             spec = prop.table(cmat["Down", ])[1])
+    data.frame(K    = x,
+               acc  = sum(diag(cmat)) / sum(cmat),
+               sens = prop.table(cmat["Up", ])[2],
+               spec = prop.table(cmat["Down", ])[1])
 })
 ```
 
 
+<!--
+# Comments
+## Major
+### Something odd is going on with the histogram of LDA discriminants. The maximum and minimum values are much smaller in magnitude than indicated by the histogram.
+
+* This is (partly) because we use the default S3 `plot()` method coming from
+the `MASS` package. We do not have much control over what happens under the 
+hood. Could it be a difference in the training vs. test sets? I expect
+the plots would be for the training set only (part of the model object), 
+and the min/max you calculate are for the test set, coming from `predict()`. 
+So they are different data, but I wouldn't expect them to be too
+different unless the test set is a much smaller subset
+* Upon looking at the code in `MASS:::plot.lda()`, it looks also like there
+is some centering/scaling happening, and its determined by `lda_fit$scaling`.
+-->
 
 ----------------------------
 
