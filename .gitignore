@@ -1,4 +1,5 @@
 \.Rproj\.user
 \.Rhistory
 \.RData
-yaml.docx
+^yaml.docx$
+.Rproj.user
