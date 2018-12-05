@@ -14,7 +14,8 @@ tables: yes
 fontsize: 12pt
 ---
 
-# Setup
+
+### Load necessary libraries {-}
 ```{r setup, warning = FALSE, message = FALSE}
 library(tibble)           # special type of data frame
 library(magrittr)         # pipes

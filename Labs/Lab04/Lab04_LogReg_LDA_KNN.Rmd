@@ -29,6 +29,7 @@ library(dplyr)        # data wrangling
 library(purrr)        # iteration
 library(ggplot2)      # tidy plotting
 library(broom)        # summarize model objects uniformly
+library(yardstick)    # classification performance measures
 library(class)        # knn()
 library(MASS)         # lda() and qda()
 library(ISLR)         # Smarket data set
@@ -55,6 +56,7 @@ Smarket %>%
   xlab("Time") +
   geom_smooth()                                     # smooth fit
 ```
+
 
 --------------------------------
 
@@ -170,9 +172,10 @@ spec
 mean(glm_pred == test$Direction) == acc      # recall proportion trick!
 mean(glm_pred != test$Direction) == 1 - acc  # machine precision error!
 
-# Try dplyr::near; safer than `==` when floating point errors can bite
+# Try `dplyr::near()`; safer than `==` when floating point errors can bite
 dplyr::near(mean(glm_pred != test$Direction), 1 - acc)
 ```
+
 
 ---------------------------
 
