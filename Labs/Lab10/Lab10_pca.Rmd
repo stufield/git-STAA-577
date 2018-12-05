@@ -1,5 +1,5 @@
 ---
-title: 'STAA 577: Laboratory Ten </br> `tidyverse` version'
+title: 'STAA 577: Laboratory Ten </br> Unsupervised Learning (`tidyverse`)'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
@@ -12,30 +12,21 @@ output:
 ratio: '9:16'
 tables: yes
 fontsize: 12pt
-editor_options:
-  chunk_output_type: inline
 ---
 
 
-# Setup
-
+### Load necessary libraries {-}
 ```{r setup, message = FALSE, warning = FALSE}
 options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 library(magrittr)     # pipes
 library(tibble)       # tibbles
 library(dplyr)        # data wrangling
-library(purrr)        # iteration
-library(yardstick)    # classification performance measures
 library(ggplot2)      # tidy plotting
-library(ISLR)         # The `Carseats` data set
-library(e1071)        # package for SVMs (but also naive Bayes)
+library(gridExtra)    # for plotting ggplots as a grid
 ```
 
 
-
 -----------------------------
-
-
 
 # Principal Component Analysis (PCA)
 
@@ -50,33 +41,33 @@ apply(USArrests, 2, mean)
 apply(USArrests, 2, var)
 
 # Scale columns (variables) to have mean zero AND variance 1
-pr.out <- stats::prcomp(USArrests, scale = TRUE)
+pr_out <- stats::prcomp(USArrests, scale = TRUE)
 
 # Center and scale correspond to means and standard deviations for scaling
-names(pr.out)
+names(pr_out)
 
-pr.out$center
-pr.out$scale
+pr_out$center
+pr_out$scale
 
 # The rotation matrix is the right singular vectors
-pr.out$rotation
+pr_out$rotation
 
-dim(pr.out$x)
-biplot(pr.out, scale = 0)
-pr.out$rotation <- -pr.out$rotation
-pr.out$x <- -pr.out$x
-biplot(pr.out, scale = 0)
+dim(pr_out$x)
+biplot(pr_out, scale = 0)
+pr_out$rotation <- -pr_out$rotation
+pr_out$x <- -pr_out$x
+biplot(pr_out, scale = 0)
 ```
-
 
 
 ```{r singular_vals, fig.width = 8}
 # Singular values
-pr.out$sdev
-pr.var <- pr.out$sdev^2
-pr.var
-pve <- pr.var / sum(pr.var)
+pr_out$sdev
+pr_var <- pr_out$sdev^2
+pr_var
+pve <- pr_var / sum(pr_var)
 pve
+# pve/pr_var
 
 v1 <- ggplot2::qplot(x = seq_along(pve),  # convenience wrapper `qqplot()`
                      y = pve) +           # allows plotting 2 vectors w/o data.frame
@@ -101,16 +92,10 @@ v2 <- ggplot2::qplot(x = seq_along(pve),
   NULL
 
 gridExtra::grid.arrange(v1, v2, ncol = 2)
-
 ```
 
 
-
-
 --------------------------
-
-
-
 
 # K-means Clustering
 
@@ -132,19 +117,19 @@ clust_data <- matrix(stats::rnorm(50 * 2), ncol = 2) %>%
 
 clust_data
 
-
 # K-means with K=2 and 20 random starts
 km_2 <- clust_data %>%
   stats::kmeans(centers = 2, nstart = 20)
 km_2$cluster
 km_2
+km_2$totss
+km_2$betweenss
+km_2$tot.withinss
 
 # K-means with K=3 and 20 random starts
 set.seed(4)
-km_3 <- clust_data %>%
-  stats::kmeans(3, 20)
+km_3 <- clust_data %>% stats::kmeans(3, 20)
 km_3
-
 
 # Save ggplot as object for later
 k1 <- clust_data %>%
@@ -166,8 +151,7 @@ gridExtra::grid.arrange(k1, k2, ncol = 2)
 # K-means with K=3 and only one random start
 # Calculate total within cluster SSQ
 set.seed(3)
-km_3_1start <- clust_data %>%
-  stats::kmeans(3, nstart = 1)
+km_3_1start <- clust_data %>% stats::kmeans(3, nstart = 1)
 km_3_1start$tot.withinss
 
 # K-means with K=3 with 20 random starts
@@ -175,21 +159,24 @@ km_3_1start$tot.withinss
 km_3_20start <- clust_data %>%
   stats::kmeans(3, nstart = 20)
 km_3_20start$tot.withinss
+
+# K-means with K=4 with 20 random starts
+# Calculate total within cluster SSQ (Here we see the danger of "overfitting)
+km_4_20start <- clust_data %>%
+  stats::kmeans(4, nstart = 20)
+km_4_20start$tot.withinss
 ```
 
 
-
--------------------------
-
+------------------------
 
 # Hierarchical Clustering
+Using the same data set::
+* (a) **complete**: compute all pairwise distances and choose the largest
+* (b) **average**:  compute all pairwise distances and compute the average
+* (c) **single**:   compute all pairwise distances and choose the smallest
 
 ```{r hierarchical_clustering, fig.width = 10}
-# Using the same data set
-# Using (a) complete - compute all pairwise distances and choose the largest
-#       (b) average -  compute all pairwise distances and compute the average
-#       (c) single -   compute all pairwise distances and choose the smallest
-
 hc_complete <- stats::hclust(dist(clust_data), method = "complete")
 hc_average  <- stats::hclust(dist(clust_data), method = "average")
 hc_single   <- stats::hclust(dist(clust_data), method = "single")
@@ -206,22 +193,41 @@ cutree(hc_single, 2)
 cutree(hc_single, 4)
 ```
 
-
 ## Scale before clustering
-
 ```{r scaling, fig.width = 10}
 # Scale before clustering
-clust_data %>%
-  scale() %>%            # scale -> mean = 0; unit variance
-  dist() %>%             # calculate distances
-  stats::hclust(method = "complete") %>%    # perform clustering
-  plot(main = "Hierarchical Clustering with Scaled Features", sub = "")
+hc_scaled_complete <- clust_data %>%
+                      scale() %>%            # scale -> mean = 0; unit variance
+                      dist() %>%             # calculate distances
+                      stats::hclust(method = "complete")  # perform clustering
+hc_scaled_complete %>%  
+   plot(main = "Hierarchical Clustering with Scaled Features", sub = "")
+cutree(hc_scaled_complete, 2)
+
+hc_scaled_single <- clust_data %>%
+                    scale() %>%            # scale -> mean = 0; unit variance
+                    dist() %>%             # calculate distances
+                    stats::hclust(method = "single")  # perform clustering
+hc_scaled_single %>%  
+   plot(main = "Hierarchical Clustering with Scaled Features", sub = "")
+cutree(hc_scaled_single, 2)
 ```
 
 
-## Include???
+## Distance based on correlation
 ```{r doubtful}
-# Doubtful to include
+# Distance based on correlation
+# Both dist() and 1-cor() produce symmetric matrices with zero on the diagonal
+dtmp <- matrix(rnorm(10 * 3), ncol = 3) %>%        # 10x3 matrix of random data
+  dist() %>%
+  as.matrix()
+dtmp
+
+ctmp <- matrix(rnorm(10 * 3), ncol = 3) %>%       # 10x3 matrix of random data
+  t() %>%                                         # transpose
+  stats::cor()                                    # correlation matrix
+1 - ctmp
+
 matrix(rnorm(30 * 3), ncol = 3) %>%        # 10x3 matrix of random data
   t() %>%                                  # transpose
   stats::cor() %>%                         # correlation matrix
@@ -234,8 +240,14 @@ matrix(rnorm(30 * 3), ncol = 3) %>%        # 10x3 matrix of random data
 
 
 
+<!--
+# SJT:
+* Note change to correlation example
+  + Yeah, this example looks a little off, I labeled the chunk as 
+    "doubtful" because I wasn't sure if you would keep it. In your class notes
+    it doesn't look like you covered this example (though you may have verbally)
+-->
 
 ------------------------------
 
 Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.
-

@@ -1,5 +1,5 @@
 ---
-title: 'STAA 577: Laboratory Nine </br> `tidyverse` version'
+title: 'STAA 577: Laboratory Nine </br> Support Vector Machines (`tidyverse`)'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
@@ -12,14 +12,10 @@ output:
 ratio: '9:16'
 tables: yes
 fontsize: 12pt
-editor_options:
-  chunk_output_type: inline
 ---
 
 
-
-# Setup
-
+### Load necessary libraries {-}
 ```{r setup, message = FALSE, warning = FALSE}
 options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 library(magrittr)     # pipes
@@ -30,36 +26,16 @@ library(yardstick)    # classification performance measures
 library(ggplot2)      # tidy plotting
 library(ISLR)         # The `Carseats` data set
 library(e1071)        # package for SVMs (but also naive Bayes)
-library(gridExtra)    # arranging ggplot `grobs` into grid
 library(pROC)         # ROC curves
 ```
 
 
-
-
 -------------------------
 
-
-
-
-# Simulate Data
-
+# Create training data
 
 ```{r sim_data}
 set.seed(1)
-#x <- matrix(rnorm(20 * 2), ncol = 2)
-#print(x)
-#y <- c(rep(-1, 10), rep(1, 10))
-#print(y)
-
-# Add 1 to x2 where class is positive one (as opposed to negative 1)
-# Class +1 should have larger x2 than class -1
-# Class +1 and class -1 should be indisinguishable in terms of x1
-# SIMON: ARE YOU SURE ABOUT THIS? IT SEEMS TO BE ADDING +1 TO *ALL* CLASS +1; BOTH x1 & x2
-#x[y==1, ] <- x[y==1, ] + 1
-#print(x)
-#plot(x, col = (3 - y))
-
 sim_data <- matrix(rnorm(20 * 2), ncol = 2) %>%  #    20x2 matrix of random gaussian N~(0,1)
   data.frame() %>%                           # convert to data frame
   magrittr::set_names(c("F1", "F2")) %>%     # name 2 features F1 & F2
@@ -69,7 +45,6 @@ sim_data <- matrix(rnorm(20 * 2), ncol = 2) %>%  #    20x2 matrix of random gaus
                 y  = factor(y)) %>%         # make classes factor for model building
   tibble::as.tibble()                       # convert to tibble
 sim_data
-
 
 sim_data %>%
   ggplot(aes(x = F2, y = F1, colour = y)) +   # flip axes to match SVM plot method; F2 on `x`
@@ -81,9 +56,8 @@ sim_data %>%
 
 ----------------------------
 
-
-
 # Support Vector Classifier
+
 ## Fitting SVM: `cost = 10` (default)
 
 ```{r SVM_classifier1}
@@ -96,19 +70,30 @@ svmfit1 <- e1071::svm(y ~ ., data = sim_data, kernel = "linear",
 plot(svmfit1, sim_data)      # built-in S3 plot method class `svm`
 
 # The support vectors are listed by index
-svmfit1$index
 summary(svmfit1)
-svmfit1$coefs
-sum((svmfit1$coefs)^2)
-1 / sum((svmfit1$coefs)^2)
+svmfit1$index
+svmfit1$SV 
+svmfit1$coefs 
 ```
 
-### Challenge Exercise
-The plots above and below were generated via the S3 plot method for objects
-of class `svm` written in `base R` plotting. Create your own `S3 ggplot method`
-for class `svm` that produces a similar plot using `ggplot` style graphics.
-**Hint**: it should be called `ggplot.svm` and is invoked via a call like this:
 
+**NOTE**: These coefficients are Lagrange multipliers for the 
+inequality constraints when the SV classifier is posed as a quadratic
+programming problem. Through a consideration of the optimality conditions,
+they indicate which of the support vectors lie on the margin and which
+lie outside the margin. For example, point 14 lies outside the margin
+and its coefficient has magnitude equal to the cost.
+Points 1, 7, and 17 have a coefficient with magnitude less than the
+cost, and lie on the margin.
+
+
+### Challenge Exercise
+
+The plots above and below were generated via the S3 plot method for objects
+of class `svm` written in `base R` plotting. Create your own
+`S3 ggplot method` for class `svm` that produces a similar plot 
+using `ggplot` style graphics. **Hint**: it should be called `ggplot.svm`
+and is invoked via a call like this:
 ```{r gg_s3, eval = FALSE}
 ggplot(svmfit2)
 ```
@@ -124,23 +109,15 @@ svmfit2 <- e1071::svm(y ~ ., data = sim_data, kernel = "linear",
                       cost = 0.1, scale = FALSE)
 plot(svmfit2, sim_data)
 summary(svmfit2)
-
 svmfit2$index
-svmfit2$SV      # SIMON: this was commented out; your call to keep or remove
-svmfit2$coefs
-sum((svmfit2$coefs)^2)
-1 / sum((svmfit2$coefs)^2)
-svmfit2$rho     # SIMON: this was commented out; your call to keep or remove
+svmfit2$SV     
+svmfit2$coefs   
 ```
-
 
 
 -----------------------
 
-
-
-## Tuning the SVM
-
+## Select the best cost of constraints by cross validation
 ```{r tuning_svm}
 # Tune support vector classifier to find best cost of constraints
 set.seed(1)
@@ -153,20 +130,23 @@ summary(bestmod)
 ```
 
 
-## Simulate Test Data & Compute Confusion Matrix
-
+## Create new test data
 ```{r testing}
-sim_test <- matrix(rnorm(20 * 2), ncol = 2) %>%  #    20x2 matrix of random gaussian N~(0,1)
-  data.frame() %>%                           # convert to data frame
-  magrittr::set_names(c("F1", "F2")) %>%     # name 2 features F1 & F2
+sim_test <- matrix(rnorm(20 * 2), ncol = 2) %>%  # 20x2 matrix of random gaussian N~(0,1)
+  data.frame() %>%                               # convert to data frame
+  magrittr::set_names(c("F1", "F2")) %>%         # name 2 features F1 & F2
   dplyr::mutate(y = sample(c(-1, 1), 20,
-                           replace = TRUE)) %>%  # add random class variable (-1, 1)
+                           replace = TRUE)) %>%       # add random class variable (-1, 1)
   dplyr::mutate(F1 = ifelse(y == 1, F1 + 1, F1),      # add +1 to F1 for class +1
                 F2 = ifelse(y == 1, F2 + 1, F2),      # add +1 to F2 for class +1
                 y  = factor(y)) %>%         # make classes factor for model building
   tibble::as.tibble()                       # convert to tibble
 sim_test
+```
 
+
+### Predict using best cost
+``` {r SVM_best_cost}
 # Predict using the `best model`
 best_pred_test_df <- data.frame(
   true_class      = sim_test$y,
@@ -175,8 +155,13 @@ best_pred_test_df <- data.frame(
 best_pred_test_df %>%
   yardstick::conf_mat(truth = true_class, estimate = predicted_class)
 best_pred_test_df %>%
-  yardstick::accuracy(truth = true_class, estimate = predicted_class)
+  yardstick::accuracy(truth = true_class, estimate = predicted_class) %>% 
+  purrr::pluck(".estimate")
+```
 
+
+### Predict using small cost
+```{r SVM_small_cost}
 # Fit and test using cost of constraint violation = 0.01
 svmfit3 <- e1071::svm(y ~ ., data = sim_data, kernel = "linear",
                       cost = 0.01, scale = FALSE)
@@ -187,31 +172,27 @@ constraint_pred_test_df <- data.frame(
 constraint_pred_test_df %>%
   yardstick::conf_mat(truth = true_class, estimate = predicted_class)
 constraint_pred_test_df %>%
-  yardstick::accuracy(truth = true_class, estimate = predicted_class)
+  yardstick::accuracy(truth = true_class, estimate = predicted_class) %>% 
+  purrr::pluck(".estimate")
 ```
-
 
 
 --------------------------
 
-
-
-# Linearly Separable Data
+## Linearly Separable Data
 
 ```{r svm_linearly_separable_data_set}
-# simulate again -> greater separation between classes
-# such that they can be separated by the linear hyperplane
+# Create linearly separable data
 set.seed(1)
 linsep_data <- matrix(rnorm(20 * 2), ncol = 2) %>%
   data.frame() %>%                           # convert to data frame
   magrittr::set_names(c("F1", "F2")) %>%     # name 2 features F1 & F2
   dplyr::mutate(y = c(rep(-1, 10), rep(1, 10))) %>%   # add a class variable (-1, 1)
-  dplyr::mutate(F1 = ifelse(y == 1, F1 + 1.5, F1),  # add +1 to F1 for class +1
-                F2 = ifelse(y == 1, F2 + 1.5, F2),  # add +1 to F2 for class +1
-                y  = factor(y)) %>%         # make classes factor for model building
-  tibble::as.tibble()                       # convert to tibble
+  dplyr::mutate(F1 = ifelse(y == 1, F1 + 1.5, F1),    # add +1.5 to F1 for class +1
+                F2 = ifelse(y == 1, F2 + 1.5, F2),    # add +1.5 to F2 for class +1
+                y  = factor(y)) %>%                   # make classes factor for model building
+  tibble::as.tibble()                                 # convert to tibble
 linsep_data
-
 
 linsep_data %>%
   ggplot(aes(x = F2, y = F1, colour = y)) +
@@ -220,8 +201,7 @@ linsep_data %>%
   NULL
 
 # Fit with cost of constraint violation = 1e5 -> no training errors
-# Three support vectors:
-#    + some non support vectors very close to separating hyperplane
+# Three support vectors: + some non support vectors very close to separating hyperplane
 svmfit_c100000 <- e1071::svm(y ~ ., data = linsep_data,
                              kernel = "linear", cost = 1e05)
 summary(svmfit_c100000)
@@ -236,27 +216,23 @@ plot(svmfit_c1, linsep_data)
 ```
 
 
-
-
-
 ---------------------------
-
-
 
 # The Support Vector Machine
 Simulate more data, this time a 10x sized data set:
 
+## Two classes
 ```{r sim_data2}
 # Create data set
 set.seed(1)
 sim_data200 <- matrix(rnorm(200 * 2), ncol = 2) %>%
-  data.frame() %>%                           # convert to data frame
-  magrittr::set_names(c("F1", "F2")) %>%     # name 2 features F1 & F2
-  dplyr::mutate(id = dplyr::row_number()) %>%    # add index for sample ids
+  data.frame() %>%                                 # convert to data frame
+  magrittr::set_names(c("F1", "F2")) %>%           # name 2 features F1 & F2
+  dplyr::mutate(id = dplyr::row_number()) %>%      # add index for sample ids
   dplyr::mutate(y  = rep(c(1,2), c(150,50))) %>%   # add a class variable (1, 2)
   dplyr::mutate(F1 = dplyr::case_when(                    # For F1
-                       id <= 100 ~ F1 + 2,               # 1:100 -> bump +2
-                       (id > 100 & id <= 150) ~ F1 - 2, # 101:150 -> bump -2
+                       id <= 100 ~ F1 + 2,                # 1:100 -> bump +2
+                       (id > 100 & id <= 150) ~ F1 - 2,   # 101:150 -> bump -2
                        TRUE ~ F1                          # 151:200 -> bump 0
                       ),
                 F2 = dplyr::case_when(
@@ -276,13 +252,7 @@ sim_data200 %>%
 ```
 
 
-
-
-
 ---------------------------
-
-
-
 
 
 ```{r SVM2}
@@ -297,14 +267,13 @@ svm_test <- sim_data200 %>%
 svm_train %<>% dplyr::select(-id)
 
 # Fit SVM with radial kernel and cost of constraint violation = 1
-# Gamma = parameter defining kernel
+#   Gamma = parameter defining kernel
 svm_radial_c1 <- e1071::svm(y ~ ., data = svm_train, kernel = "radial",
                             gamma = 1, cost = 1)
 plot(svm_radial_c1, svm_train)
 summary(svm_radial_c1)
 
-# Fit SVM with radial kernel and cost of constraint violation = 1E5
-# Is this too much?
+# Fit SVM with radial kernel and cost of constraint violation = 1E5. Is this too much?
 svm_radial_c100000 <- e1071::svm(y ~ ., data = svm_train,
                                  kernel = "radial", gamma = 1, cost = 1e5)
 plot(svm_radial_c100000, svm_train)
@@ -328,39 +297,86 @@ tuned_svm_df <- data.frame(
   # THIS IS A DIABOLICAL EDGE CASE; but on that arises when using `predict`
 )
 
+class(svm_test$y)
+svm_test$y
+
 tuned_svm_df %>%
   yardstick::conf_mat(truth = true_class, estimate = predicted_class)
-tuned_svm_df %>%
-  yardstick::accuracy(truth = true_class, estimate = predicted_class) -> acc
+acc <- tuned_svm_df %>%
+  yardstick::accuracy(truth = true_class, estimate = predicted_class) %>% 
+  purrr::pluck(".estimate")
 acc
 ```
 
-Thus, approximately `r acc*100`% of the observations are correctly classified
-by this SVM.
 
+Thus, approximately `r acc * 100`% of the observations are
+correctly classified by this SVM.
+
+----------------------------
+
+## Multiple Classes
+
+```{r multiple_classes}
+set.seed(1)
+sim_data250 <- matrix(rnorm(50 * 2), ncol = 2) %>%
+  data.frame() %>%                        # convert to data frame
+  magrittr::set_names(c("F1", "F2")) %>%  # name 2 features F1 & F2
+  dplyr::mutate(y  = rep(0, 50),          # create third class variable (0)
+                F2 = F2 + 2) %>%          # add +2 to F2 only
+  # Add newly simulated data to existing sim_data200, first removing the `id` column
+  rbind(dplyr::select(sim_data200, -id)) %>%  # strips factor levels from `y`; converts -> character
+  dplyr::mutate(y = factor(y)) %>%            # must refactor in the new `0` class
+  tibble::as.tibble()
+
+sim_data250
+
+# Plot and see the newly generated `0` class in purple
+# Original data from sim_data200 remains same (blue/red dots)
+sim_data250 %>%
+  ggplot(aes(x = F2, y = F1, colour = y)) +
+  geom_point(alpha = 0.5, size = 4) +
+  scale_colour_manual(values = c("purple", "blue", "red")) +
+  NULL
+
+svm_3class <- e1071::svm(y ~ ., data = sim_data250, kernel = "radial",
+                         cost = 10, gamma = 1)
+summary(svm_3class)
+plot(svm_3class, sim_data250)
+```
+
+
+---------------------------
 
 
 # ROC curves
-Typically class predictions are generated for a given probability cutoff, typically
-0.5. Receiver Operator Criterion (ROC) curves can be seen as representing the
-performance of a classifier for *all possible cutoffs*. With *sensitivity* in
-[0, 1] and *1-specificity* also in [0,1], the total plotting area is 1.0, and
-the "area under the curve" (AUC) can be used as a performance metric. Below
-we use the `pROC` package to generate a ROC curve for the optimal SVM, with
-$\gamma = 2$ and `cost = 1`.
+
+Typically class predictions are generated for a given probability cutoff,
+typically 0.5. Receiver Operator Criterion
+([ROC](https://en.wikipedia.org/wiki/Receiver_operating_characteristic)) 
+curves can be seen as representing the performance of a classifier for 
+*all possible cutoffs*.
+With *sensitivity* (true positives) in [0, 1] and *1-specificity*
+(false positivies) also in [0,1], the total plotting area is 1.0, and 
+the "area under the curve" (AUC) can be used as a performance metric.
+For SVM, the usual cutoff for determine the class would be zero.
+
+
+## Using `pROC::roc()`
+
+We use the `pROC::roc()` function to generate a ROC curve for the 
+optimal SVM, with $\gamma = 2$ and `cost = 1`.
 
 ```{r roc, message = FALSE, warning = FALSE, fig.width = 5, fig.height = 5}
-# to obtain class probabilities rather than
-# class predictions, use the decision.values = TRUE argument
+# To obtain class probabilities rather than class predictions, use the decision.values = TRUE argument
 svm_optimal <- e1071::svm(y ~ ., data = svm_train, kernel = "radial",
                           gamma = 1, cost = 1, decision.values = TRUE)
 
 # These "probabilities" are actually ratios
 train_prob <- predict(svm_optimal, newdata = svm_train,
                       decision.values = TRUE) %>%
-  attributes() %>%                  # prob ratios are "hidden" in the attributes
+  attributes() %>%                      # prob ratios are "hidden" in the attributes
   purrr::pluck("decision.values") %>%   # in a list element called `decision.values`
-  as.numeric()                      # in a nx1 matrix; we need a vector
+  as.numeric()                          # in a nx1 matrix; we need a vector
 
 roc_train <- pROC::roc(response = svm_train$y,
                        predictor = train_prob,
@@ -371,10 +387,10 @@ pROC::auc(roc_train)               # AUC
 # ROC curve via S3 plot method
 roc_train %>%
   plot(col = "navy",
-       main = "Training (blue)\n Test (red)",
-       print.thres = c(0.3, 0.5, 0.8),  # 3 arbitrarily chosen cutoffs
-       print.thres.cex = 0.8,           # size of the text
-       legacy.axes = TRUE,              # traditionally 1 - spec if plotted
+       main = "Training (blue); Test (red)",
+       print.thres = c(-1, 0, 0.5, 1.0),   # 4 arbitrarily chosen cutoffs
+       print.thres.cex = 0.8,              # size of the text
+       legacy.axes = TRUE,                 # traditionally 1 - spec if plotted
        print.thres.pattern = "cut = %.2f (Spec = %.2f, Sens = %.2f)")
 
 test_prob <- predict(svm_optimal, newdata = svm_test,
@@ -395,55 +411,13 @@ roc_test %>%
        legacy.axes = TRUE)
 ```
 
+Recall that:
+* Sensitivity = true positive rate
+* 1-specificity = false positive rate
 
 
 
---------------------------
-
-
-# SVM with Multiple Classes
-
-```{r multiple_classes}
-set.seed(1)
-sim_data250 <- matrix(rnorm(50 * 2), ncol = 2) %>%
-  data.frame() %>%                        # convert to data frame
-  magrittr::set_names(c("F1", "F2")) %>%  # name 2 features F1 & F2
-  dplyr::mutate(y  = rep(0, 50),          # create third class variable (0)
-                F2 = F2 + 2) %>%          # add +2 to F2 only
-  # now add newly simulated data to existing sim_data200
-  # must first remove the `id` column
-  rbind(dplyr::select(sim_data200, -id)) %>%  # strips factor levels from `y`; converts -> character
-  dplyr::mutate(y = factor(y)) %>%  # must refactor in the new `0` class
-  tibble::as.tibble()
-
-sim_data250
-
-# Plot and see the newly generated `0` class in purple
-# Original data from sim_data200 remains same (blue/red dots)
-sim_data250 %>%
-  ggplot(aes(x = F2, y = F1, colour = y)) +
-  geom_point(alpha = 0.5, size = 4) +
-  scale_colour_manual(values = c("purple", "blue", "red")) +
-  NULL
-
-svm_3class <- e1071::svm(y ~ ., data = sim_data250, kernel = "radial",
-                         cost = 10, gamma = 1)
-summary(svm_3class)
-plot(svm_3class, sim_data250)
-```
-
-
-
-
-
-----------------------------
-
-
-
-
-
-
-# Appendix: ROC with `ggplot2`
+## Using `ggplot2` to generate ROC curves
 ```{r ggroc, eval = FALSE}
 ggroc <- function(roc, showAUC = TRUE, interval = 0.2,
                   breaks = seq(0, 1, interval)) {
@@ -469,6 +443,35 @@ ggroc <- function(roc, showAUC = TRUE, interval = 0.2,
 
 
 
+
+<!-- # SJT comments
+## Major
+* I do not understand the coefs or rho output from svm. I want to drop these.
+  The only sensible IMHO thing the coefs can be are the coefficients 
+  \hat\alpha that appear in equation (12.17), page 421 of ESL 2nd edition.
+  This comes from expressing the SVM as a quadrative programming problem
+  and considering the Kuhn-Tucker optimality conditions. 
+  + This is up to you, feel free to drop if needed.
+* I think I understand the ROC curves now, but I want to discuss. 
+  + No problem. Love ROCs, they're a pretty integral part of what we do in BI.
+## Minor
+* What is the NULL trick in ggplot2?
+  + if you add an extra line at the end `+` \n NULL, then you can comment out
+    lines above and it will not break because there is a missing `+` sign
+    at the bottom. For debugging while you're plotting. I've learned this trick
+    and now I use it so much I just do it every time I make a ggplot.
+* I don't understand your comment about a diabolical edge case
+  +
+* Error creating notebook. See line 298
+  + Looks like the `yardstick` package changed the format of what 
+    comes out of `yardstick::accuracy()`, and probably the other similar functions,
+    so we were indexing something what wasn't there. Looks like you were on
+    the right track. Just make sure you have yardstick >=0.0.2 and dplyr >= 0.7.8
+    It should work (this had me out of commission for about 1h trying to figure it out)
+ -->
+
 -----------------------------
 
-Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.
+Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown)
+(v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.
+

@@ -152,9 +152,12 @@ head(rf_pred)
 
 # model performance metrics
 rf_pred %>% yardstick::conf_mat(truth = truth, estimate = pred)
-rf_pred %>% yardstick::accuracy(truth = truth, estimate = pred)
-rf_pred %>% yardstick::sens(truth = truth, estimate = pred)
-rf_pred %>% yardstick::spec(truth = truth, estimate = pred)
+rf_pred %>% yardstick::accuracy(truth = truth, estimate = pred) %>%
+  purrr::pluck(".estimate")
+rf_pred %>% yardstick::sens(truth = truth, estimate = pred) %>%
+  purrr::pluck(".estimate")
+rf_pred %>% yardstick::spec(truth = truth, estimate = pred) %>%
+  purrr::pluck(".estimate")
 
 # ROC object
 roc_obj <- pROC::roc(response  = rf_pred$truth,      # true class names

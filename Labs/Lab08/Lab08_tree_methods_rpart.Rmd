@@ -18,20 +18,19 @@ fontsize: 12pt
 ### Load necessary libraries {-}
 ```{r setup, message = FALSE, warning = FALSE}
 options(warnPartialMatchArgs = FALSE)  # don't want these warnings
+library(ISLR)         # The `Carseats` data set
+library(MASS)         # The `Boston` data set
 library(magrittr)     # pipes
 library(tibble)       # tibbles
 library(dplyr)        # data wrangling
 library(purrr)        # iteration
 library(yardstick)    # classification performance measures
-library(broom)        # summarizing models consistently
-library(ggplot2)      # tidy plotting
-library(ISLR)         # The `Carseats` data set
 library(rpart)        # building classification trees
 library(randomForest) # package name says it
-library(MASS)         # The `Boston` data set
 library(gbm)          # Boosting algorithms
-library(caret)        # classification and Regression Training (CV)
+library(ggplot2)      # tidy plotting
 library(gridExtra)    # arranging ggplot `grobs` into grid
+library(caret)        # classification and Regression Training (CV)
 ```
 
 -----------------------
@@ -118,10 +117,12 @@ tree_pred
 
 # Get performance metrics via `yardstick`
 tree_pred %>% yardstick::conf_mat(truth = High, estimate = pred)  # confusion
-tree_pred %>% yardstick::accuracy(truth = High, estimate = pred)  # accuracy
-tree_pred %>% yardstick::sens(truth = High, estimate = pred)      # sensitivity
-tree_pred %>% yardstick::spec(truth = High, estimate = pred)      # specificity
-
+tree_pred %>% yardstick::accuracy(truth = High, estimate = pred) %>% # accuracy
+  purrr::pluck(".estimate")
+tree_pred %>% yardstick::sens(truth = High, estimate = pred) %>%  # sensitivity
+  purrr::pluck(".estimate")
+tree_pred %>% yardstick::spec(truth = High, estimate = pred) %>%  # specificity
+  purrr::pluck(".estimate")
 ```
 
 
@@ -187,7 +188,8 @@ tibble(test = test$High,
   yardstick::conf_mat(truth = test, estimate = pred)  # confusion matrix
 tibble(test = test$High,
        pred = tree_pred_9) %>%
-  yardstick::accuracy(truth = test, estimate = pred)  # accuracy
+  yardstick::accuracy(truth = test, estimate = pred) %>%  # accuracy
+  purrr::pluck(".estimate")
 ```
 
 
@@ -420,12 +422,11 @@ summary(gbm_boston1)
 
 ```{r plotting, fig.width = 9, fig.height=5}
 # Partial dependence plots illustrate the marginal effect of the
-# selected variables  on the response after integrating out the other variables
-par(mfrow = c(1, 2))
-plot.gbm(gbm_boston1, i = "rm")     # built-in S3 plot method
-title(main = "Marginal effect of \n number of rooms")
-plot.gbm(gbm_boston1, i = "lstat")
-title(main = "Marginal effect of \n % lower status")
+# selected variables on the response after integrating out the other variables
+plot.gbm(gbm_boston1, i = "rm",     # built-in S3 plot method
+  main = "Marginal effect of \n number of rooms")
+plot.gbm(gbm_boston1, i = "lstat",
+  main = "Marginal effect of \n % lower status")
 ```
 
 
