@@ -1,5 +1,5 @@
 ---
-title: 'STAA 577: Laboratory Eight </br> `tidyverse` version'
+title: 'STAA 577: Laboratory Eight </br> Tree-based methods (`tidyverse`)'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
@@ -12,13 +12,10 @@ output:
 ratio: '9:16'
 tables: yes
 fontsize: 12pt
-editor_options:
-  chunk_output_type: inline
 ---
 
 
-# Setup
-
+### Load necessary libraries {-}
 ```{r setup, message = FALSE, warning = FALSE}
 options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 library(magrittr)     # pipes
@@ -33,14 +30,11 @@ library(rpart)        # building classification trees
 library(randomForest) # package name says it
 library(MASS)         # The `Boston` data set
 library(gbm)          # Boosting algorithms
-library(caret)        # classification and Regresstion Training (CV)
+library(caret)        # classification and Regression Training (CV)
 library(gridExtra)    # arranging ggplot `grobs` into grid
 ```
 
-
-
 -----------------------
-
 
 # The `Carseats` Data Set
 ```{r Carseats}
@@ -50,70 +44,64 @@ dim(Carseats)
 ```
 
 
+# Classification Trees
 
+**NOTE**: In this lab we will use the `rpart::rpart()` function instead of 
+the `tree::tree()` function used in the ISLR textbook uses, since
+`rpart` has gained popularity over `tree` in the years since ISLR was 
+published. `rpart` uses "recursive partitioning" to build its trees
+(see "Classification and Regression Trees", by Breiman, Friedman, Olshen and Stone, 1984).
+Experience has shown this results in a *slight* performance improvement for 
+classification problems compared to `tree::tree()`, although performance is
+similar in *this* data problem. 
+See [rpart.pdf](https://cran.r-project.org/web/packages/rpart/rpart.pdf)
 
-
-
-# Fitting Classification Trees
-**NOTE**: In this lab we will use the `rpart::rpart` function instead of the
-`tree::tree` function which the ISLR textbook uses. The reasons boil down to:
-
-  1. `rpart` uses "recursive partitioning" to build its trees, which in theory
-  should be faster.
-  2. Previous experience has shown a *slight* performance improvement in
-  classification problems (though performance is similar in *this* data problem.
-  3. It is an implementation of most of the tree fitting algorithm described
-  in the 1984 book by Breiman, Friedman, Olshen and Stone (well known).
-  4. In the years since ISLR first came out, `rpart` has gained popularity over
-  `tree`.
 
 First we fit a general classification tree to the `Carseats` data set:
+
 ```{r fit_tree1}
-# Create a variable for classification of
-# "low" and "high" sales based on sales cutoff of 8.0
+# Create a variable for classification of "low" and "high" sales based on sales cutoff of 8.0
 # Append new categorical variable to the Carseats dataframe
 # Ensure the response variable (High) is a factor for rpart::rpart
 Carseats %<>% dplyr::mutate(High = ifelse(Sales <= 8, "No", "Yes") %>% factor(),
                             # `id` is for tracking samples below; train/test
                             id  = dplyr::row_number())
+Carseats
+dim(Carseats)
 
 tree_carseats <- rpart::rpart(High ~ .,
                               data = dplyr::select(Carseats, -Sales, -id))
 tree_carseats
-printcp(tree_carseats)
+#printcp(tree_carseats)
 
-# creates an empty plot
-# to which we will add text of the tree
+# creates an empty plot to which we will add text of the tree
 par(xpd = NA)                       # the default plot cuts off margins; enlarge
 plot(tree_carseats, uniform = TRUE) # branch length equal; unrelated to gini
 text(tree_carseats, use.n = TRUE, cex = 0.8)   # add text labels
 title(main = "CART tree for High/Low sales of carseats")  # add title
+```
 
-# Just for fun -> include Sales as a predictor
-# What do you think will happen?
+```{r exercise, eval = FALSE}
+# Exercise: Include Sales as a predictor. What do you think will happen?
 tree_carseats_trivial <- rpart::rpart(High ~ ., Carseats)
 tree_carseats_trivial
-
-# creates an empty plot
+printcp(tree_carseats_trivial)
 plot(tree_carseats_trivial, uniform = TRUE)  # uniform vertical spacing of nodes
 text(tree_carseats_trivial)
 title(main = "CART tree for High/Low sales of carseats")
-tree_carseats_trivial
 ```
 
 
 -----------------
 
 
-
-# Fitting Classification Tree Test Set
-To properly fit a model, we must evaluate performance based on a hold-out
-test set:
+## Estimating the test error (by hand)
+Evaluate performance based on a hold-out test set.
 
 ```{r fit_tree2}
-set.seed(2)                              # reproducible
-train_car <- Carseats %>%
-  dplyr::sample_frac(size = 0.5)         # random selection of rows @ 50% = 200
+set.seed(2)                                   # reproducible
+train_car <- Carseats %>% 
+  dplyr::sample_frac(size = 0.5)              # random selection of rows @ 50% = 200
 test <- Carseats %>%
   dplyr::anti_join(train_car, by = "id") %>%  # use anti_join to get the sample setdiff
   dplyr::select(-Sales, -id)                  # remove Sales and merge identifier
@@ -137,25 +125,34 @@ tree_pred %>% yardstick::spec(truth = High, estimate = pred)      # specificity
 ```
 
 
-
 ------------------------------
 
+## Cross-validating trees
 
+Cross-validation based on *misclassification* is performed "under-the-hood"
+within `rpart`; we simply need to access it. 
 
-## Cross-validated trees
-We look at cross-validation to determine optimal level of tree complexity
-based on cross-validated error, i.e., *misclassification*. Luckily, this has
-been calculated for us "under-the-hood" within `rpart`; we simply need
-to access it.
+Complexity parameter. Any split that does not decrease the overall lack of 
+fit by a factor of `cp` is not attempted. For instance, with
+anova splitting, this means that the overall R-squared must increase by `cp`
+at each step. The main role of this parameter is to save computing time by
+pruning off splits that are obviously not worthwhile. Essentially,the user
+informs the program that any split which does not improve the fit by `cp`
+will likely be pruned off by cross-validation, and that hence the program
+need not pursue it.
+
+Complexity penalties are actually ranges, not values. By default, the
+geometric mean of each interval is used for cross validation.
 
 ```{r cv, fig.width = 10, fig.height = 4}
 rpart::printcp(tree_carseats)  # print cross-validation results
 rpart::plotcp(tree_carseats)   # plot cross-validation results
 title("Tree Size")
 
-# which level of complexity minimizes cv error?
+# Determine the size of the complexity parameter which minimizes cv error
+# tree_carseats$cptable
 best_cp <- tree_carseats$cptable %>%
-  data.frame() %>%      # easier to work with than matrices
+  data.frame() %>%                      # easier to work with than matrices
   dplyr::slice(which.min(.$xerror)) %>% # get the row where `xerror` is min
   dplyr::pull("CP")                     # pull out `CP` from that row
 
@@ -163,50 +160,62 @@ best_cp
 ```
 
 
-
-
-
 --------------------------
 
-
-
-
 ## Pruning Trees
-It is often a good idea to *prune* the tree to avoid over-fitting, this is
-achieved via the `rpart::prune` function given a *complexity parameter*,
-`cp` (calculated above). Note the difference between *relative error* (plotted) and *xerror* (which we are using).
 
+*Pruning*  trees to avoid over-fitting is achieved via the `rpart::prune()`
+function given a *complexity parameter*, `cp` (calculated above).
+Note the difference between *relative error* (plotted)
+and *xerror* (which we are using).
+
+### Choosing the best tree
 ```{r pruning, warning = FALSE}
-# Prune to 8-node tree and predict again using new tree
-# cp is the complexity parameter;
-#prune_carseats_8 <- rpart::prune(tree_carseats, cp = 0.0208)
-prune_carseats_8 <- rpart::prune(tree_carseats, cp = best_cp)
+# Prune to 9-node tree (8 splits) and predict again using new tree
+#   cp is the complexity parameter;
+#   prune_carseats_8 <- rpart::prune(tree_carseats, cp = 0.0208)
+prune_carseats_9 <- rpart::prune(tree_carseats, cp = best_cp)
 par(xpd = NA)
-plot(prune_carseats_8, uniform = TRUE)
-text(prune_carseats_8, use.n = TRUE, cex = 0.8)
-title(main = "8-leaf classification tree for carseats")
+plot(prune_carseats_9, uniform = TRUE)
+text(prune_carseats_9, use.n = TRUE, cex = 0.8)
+title(main = "9-leaf classification tree for carseats")
 
 # Calculate performance metrics
-tree_pred_8 <- predict(prune_carseats_8, test, type = "class")
+tree_pred_9 <- predict(prune_carseats_9, test, type = "class")
 tibble(test = test$High,
-       pred = tree_pred_8) %>%
+       pred = tree_pred_9) %>%
   yardstick::conf_mat(truth = test, estimate = pred)  # confusion matrix
 tibble(test = test$High,
-       pred = tree_pred_8) %>%
+       pred = tree_pred_9) %>%
   yardstick::accuracy(truth = test, estimate = pred)  # accuracy
 ```
 
 
+### Choosing the number of nodes
+
+```{r pruning2, warning = FALSE}
+# Prune to 6-node tree (5 splits) and predict again using new tree
+#   cp is the complexity parameter;
+prune_carseats_6 <- rpart::prune(tree_carseats, cp = 0.03)
+par(xpd = NA)
+plot(prune_carseats_6, uniform = TRUE)
+text(prune_carseats_6, use.n = TRUE, cex = 0.8)
+title(main = "6-leaf classification tree for carseats")
+
+# Calculate performance metrics
+tree_pred_6 <- predict(prune_carseats_6, test, type = "class")
+tibble(test = test$High,
+       pred = tree_pred_6) %>%
+  yardstick::conf_mat(truth = test, estimate = pred)  # confusion matrix
+tibble(test = test$High,
+       pred = tree_pred_6) %>%
+  yardstick::accuracy(truth = test, estimate = pred)  # accuracy
+```
+
 
 -----------------------------
 
-
-
-
-
-
-
-# Regression Trees: `Boston` Data
+# Regression Trees
 We next turn our attention to a regression setting using the `Boston` data set.
 
 ```{r Regression_trees}
@@ -219,7 +228,7 @@ train_boston <- Boston %>%
   dplyr::sample_frac(size = 0.5)         # random selection of rows @ 50% = 200
 test_boston <- Boston %>%
   dplyr::anti_join(train_boston, by = "id") %>%  # use anti_join to get the sample setdiff
-  dplyr::select(-id)              # remove id
+  dplyr::select(-id)                     # remove id
 train_boston %<>% dplyr::select(-id)     # remove id
 
 boston_tree <- rpart::rpart(medv ~ ., data = train_boston)
@@ -230,16 +239,32 @@ par(xpd = NA)
 plot(boston_tree, uniform = TRUE)          # view the full tree
 title(main = "Regression Tree for Median House Values")
 text(boston_tree, use.n = TRUE, cex = 0.8)
+```
 
+
+## Cross-validating trees 
+
+```{r Regression_trees_cv}
 par(mfrow = c(1, 2))
 rpart::rsq.rpart(boston_tree)  # regression R^2 CV statistics
-
+# Produces two plots. The first plots the r-square (apparent and apparent - 
+# from cross-validation) versus the number of splits.
+# The second plots the Relative Error(cross-validation) +/- 1-SE from
+# cross-validation versus the number of splits
 par(mfrow = c(1, 1))
 rpart::plotcp(boston_tree)     # plot complexity across tree size as above
 title("Tree Size")
+# The cptable in the fit contains the mean and standard deviation of 
+# the errors in the cross-validated prediction against each of the 
+# geometric means, and these are plotted by this function.
+# A good choice of cp for pruning is often the leftmost value for
+# which the mean lies below the horizontal line
+```
 
-# best size seems to be ~7-8
-# we'll go with cp = 0.016
+
+## Pruning trees 
+```{r Regression_trees_optimal}
+# best size seems to be ~7-8 -> we'll go with cp = 0.016
 prune_boston <- rpart::prune(boston_tree, cp = 0.016)
 par(xpd = NA)
 plot(prune_boston, uniform = TRUE)
@@ -264,24 +289,17 @@ tibble::tibble(actual_medv    = test_boston$medv,
 ```
 
 
-
-
-
 --------------------------------
 
-
-
-
-
-# Bagging and Random Forests: `Boston` Data
-Recall:
-
-  * Bagging is a special case of random forest with `mtry = p`, where `p` is
-  the number of predictors to try at each split.
-  * For this example, `mtry = 13`
+# Bagging
+## Random Forest
+Bagging is a special case of random forest with `mtry = p`, where `p` is
+the number of predictors to try at each split. Here `p = 13` so for
+this example `mtry = 13`.
 
 ```{r random_forest}
 set.seed(1)
+dim(train_boston)
 rf_boston13 <- randomForest::randomForest(medv ~ ., data = train_boston,
                                           mtry = 13, importance = TRUE)
 rf_boston13
@@ -307,7 +325,11 @@ rf_boston25 <- randomForest::randomForest(medv ~ ., data = train_boston,
 yhat_3 <- predict(rf_boston25, newdata = dplyr::select(test_boston, -medv))
 mse3   <- mean((yhat_3 - test_boston$medv)^2)
 mse3
+```
 
+
+
+``` {r Random Forest}
 # Reduce the number of variables/predictors randomly
 # sampled at each split (`mtry = 6`)
 set.seed(1)
@@ -320,27 +342,28 @@ mse4
 
 
 ## Gini Importance
-  1. Mean decrease in accuracy in predictions on out-of-bag samples
-     when variable is excluded.
-  2. Measure of the total decrease in node impurity that results from
-     splits over the variable -> Averaged over all trees in forest.
-  3. See laboratory *followup_notes* file: `gini_backward_rf.nb.html`
-     for additional discussion about `Gini` importance.
+1. Mean decrease in accuracy of predictions on out-of-bag samples when 
+   variable is excluded.
+2. Measure of the total decrease in node impurity that results from splits
+   over the variable when averaged over all trees in forest.
+3. See laboratory *followup_notes* file: `gini_backward_rf.nb.html` for
+   additional discussion about `Gini` importance.
 
 ```{r gini}
-importance(rf_boston6)       # built-in S3 print method for class `randomForest`
-varImpPlot(rf_boston6)       # built-in S3 plot method for class `randomForest`
+importance(rf_boston6)    # built-in S3 print method for class `randomForest`
+varImpPlot(rf_boston6)    # built-in S3 plot method for class `randomForest`
 ```
 
 
-
-## Iterate using `purrr`
+## Optimizing `mtry` and `ntree`
 We can iterate over possible values of `mtry` and `ntree` to obtain a view
-of how these parameters affect `mse`. We will do with with the `purrr` package
-and plot with `ggplot2` all in one pipe chain.
+of how these parameters affect `mse`. We will do with with the `purrr`
+package and plot with `ggplot2` all in one pipe chain.
 
 ```{r rf_optimization, fig.width = 10}
 set.seed(101)
+
+# Establish values for mtry and ntree
 n_feat    <- ncol(train_boston) - 1
 mtry_vec  <- seq(floor(n_feat / 3), n_feat)
 ntree_vec <- seq(50, 1000, by = 50)
@@ -375,13 +398,9 @@ gridExtra::grid.arrange(gg$mtry, gg$ntree, ncol = 2)   # plot in 1x2 grid
 ```
 
 
-
 --------------------------------
 
-
-
-
-# Boosting: `Boston` Data
+# Boosting
 Boosting is performed via the `gbm` package in `R`, which fits "Generalized
 Boosted Regression Models". Recall that:
 
@@ -399,28 +418,27 @@ summary(gbm_boston1)
 ```
 
 
-## GBM Plotting
 ```{r plotting, fig.width = 9, fig.height=5}
-# Partial dependence plots illustrate the marginal effect
-# of the selected variables  on the response after integrating
-# out the other variables
+# Partial dependence plots illustrate the marginal effect of the
+# selected variables  on the response after integrating out the other variables
 par(mfrow = c(1, 2))
-plot(gbm_boston1, i = "rm")     # built-in S3 plot method
+plot.gbm(gbm_boston1, i = "rm")     # built-in S3 plot method
 title(main = "Marginal effect of \n number of rooms")
-
-plot(gbm_boston1, i = "lstat")
+plot.gbm(gbm_boston1, i = "lstat")
 title(main = "Marginal effect of \n % lower status")
 ```
 
 
-## GBM Predicting & MSE
+## Choice of shrinkage parameter
 ```{r predicting, warning = FALSE}
+
+# Shrinkage parameter = 0.001 (default)
 yhat_gbm1 <- predict(gbm_boston1, newdata = dplyr::select(test_boston, -medv),
                      n.trees = 5000)
 mse5 <- mean((yhat_gbm1 - test_boston$medv)^2)
 mse5
 
-# Set shrinkage parameter: 0.001 -> 0.2
+# Shrinkage parameter = 0.2
 gbm_boston0.2 <- gbm::gbm(medv ~ ., data = train_boston,
                           distribution = "gaussian", n.trees = 5000,
                           interaction.depth = 4, shrinkage = 0.2,
@@ -433,10 +451,7 @@ mse6
 ```
 
 
-
 ---------------------------
-
-
 
 # Appendix: CART via `caret`
 The [caret](http://topepo.github.io/caret/index.html) package also provides
@@ -444,7 +459,8 @@ a convenient framework for fitting cross-validated CART models in `R`.
 
 Two notes:
 
-  * The `caret` package will "soon" be replaced by the now in development `parsnip` package
+  * The `caret` package will "soon" be replaced by the now in
+    development `parsnip` package
   * Cross-validation is *built-in* to the ensemble `random forest` algorithm
 
 ```{r caret, fig.height = 6, fig.width = 10, warning = FALSE}
@@ -491,6 +507,19 @@ caret_gg %>%
 [CART Methods by Joao Neto](http://www.di.fc.ul.pt/~jpn/r/tree/tree.html)
 
 
+
+<!--
+# Comments SJT 
+## Major -- caused in large part by the use of rpart!!
+* In do not fully understand rpart::rsq.rpart.
+  Is the apparent and relative r-squared terminology common?
+  + No, I actually don't understand it myself, but hoped you had covered it
+    in class. I typically use relative Rsq. This seems like a weird oddity
+    of rpart.
+-->
+
+
 -----------------------------
 
-Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.
+Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown)
+(v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.
