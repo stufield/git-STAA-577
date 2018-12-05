@@ -1,5 +1,5 @@
 ---
-title: 'STAA 577: Laboratory Six </br> `tidyverse` version'
+title: 'STAA 577: Laboratory Six </br> Subset selection (`tidyverse`)'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
@@ -14,8 +14,7 @@ tables: yes
 fontsize: 12pt
 ---
 
-# Setup
-
+### Install libraries {-}
 ```{r setup, message = FALSE, warning = FALSE}
 options(warnPartialMatchArgs = FALSE)  # don't want these warnings
 library(magrittr)     # pipes
@@ -31,55 +30,53 @@ library(glmnet)       # logistic regression models
 ```
 
 
-
 -----------------------------
 
 
-
 # The `Hitters` Data Set
-
 ```{r data}
 # Explore data set
-Hitters %<>% as.tibble()      # let's be tidy and convert to tibble
-names(Hitters)                # what are the variables to work with?
-Hitters                       # view the tibble; 322 observations
-sum(is.na(Hitters$Salary))    # there are 59 observations without Salary info
-Hitters %<>% na.omit()        # let's remove them
-nrow(Hitters)                 # we now have 263 observations
-sum(is.na(Hitters))           # and no more missing data for Salary
+Hitters %<>% as.tibble()      # Convert to tibble
+names(Hitters)                # Variable names
+Hitters                       # View the tibble; 322 observations
+sum(is.na(Hitters$Salary))    # There are 59 observations without Salary info
+Hitters %<>% na.omit()        # Remove observations without salary information
+nrow(Hitters)                 # 263 observations remaining
+sum(is.na(Hitters$Salary))    # All entries have salary information
 ```
-
 
 
 ------------------------
 
 
-
 # Subset Selection
+## Exhaustive subset selection
 The `leaps::regsubsets` function performs an exhaustive search for the best
-subsets of the variables in `x` for predicting `y` in a Linear
-Regression setting, using an efficient branch-and-bound algorithm. It chooses
-the best subset based on RSS. See `?leaps::regsubsets`.
+subsets of the variables in `x` for predicting `y` in a Linear Regression
+setting, using an efficient branch-and-bound algorithm. It chooses the best
+subset based on RSS. See `?leaps::regsubsets`.
 
-```{r subset_selection}
-regfit_full <- leaps::regsubsets(Salary ~ ., Hitters)
+```{r subset_selection_default_nvmax}
+# Default value for NVMAX (maximum number of variables) is 8
+regfit_full8 <- leaps::regsubsets(Salary ~ ., Hitters)
+reg_summary8 <- summary(regfit_full8)
+names(reg_summary8)
+reg_summary8$obj
+```
 
-# Best two-variable model contains
-# Hits and CRBI features
-# Rather verbose print method; only look at `obj` entry (Simon; pls double check)
-summary(regfit_full)$obj
-
+```{r subset_selection_nvmax19}
+# Repeat with all 19 variables
 regfit_full <- leaps::regsubsets(Salary ~ ., data = Hitters, nvmax = 19)
 reg_summary <- summary(regfit_full)
 names(reg_summary)
 reg_summary$obj
 ```
 
-Now let's view the results, both as a `tibble` and graphically
-with `ggplot2::qplot`:
 
+View the results, both as a `tibble` and graphically with `ggplot2::qplot()`:
 ```{r subset_selection2}
 # View the model performance metrics for each size model
+# Note: tibble() allows for non-standard characters as headers (e.g. '-' or spaces)
 tibble::tibble(
   RSS = reg_summary$rss,
   `R-squared` = reg_summary$rsq,
@@ -87,7 +84,6 @@ tibble::tibble(
   CP = reg_summary$cp,
   BIC = reg_summary$bic
 )
-
 
 # RSS
 p_rss <- qplot(seq_along(reg_summary$rss), reg_summary$rss,
@@ -109,7 +105,6 @@ p_cp  <- qplot(seq_along(reg_summary$cp), reg_summary$cp,
   geom_point(aes(x = pt_cp, y = reg_summary$cp[pt_cp]),
              colour = "red", size = 3)
 
-
 pt_bic <- which.min(reg_summary$bic)
 p_bic  <- qplot(seq_along(reg_summary$bic), reg_summary$bic,
                 xlab = "Number of Variables", ylab = "BIC") +
@@ -118,7 +113,7 @@ p_bic  <- qplot(seq_along(reg_summary$bic), reg_summary$bic,
              colour = "red", size = 3)
 
 # All 4 plots stored in variable `reg_plots`
-# Now plot them in a grid
+# Plot in a grid
 gridExtra::grid.arrange(p_rss,
                         p_adjr2,
                         p_cp,
@@ -126,23 +121,28 @@ gridExtra::grid.arrange(p_rss,
 ```
 
 
-The `leaps` package has a (rather ugly) built in S3 plot
-method (sorry, no `ggplot`) for class `regsubsets` which can be
-used to display the selected variables for the best model for a
-given number of predictors, ranked according to $R^2$. See `?plot.regsubsets`.
+The `leaps` package has a (rather ugly) built in S3 plot method 
+(sorry, no `ggplot`) for class `regsubsets` which you should consider by 
+viewing "horizontally". It displays the selected variables for a given value 
+of model selection statistic. See `?plot.regsubsets`.
 
-```{r plot_subsets}
+```{r plot_subsets, fig.height = 7, fig.width = 12}
 par(mfrow = c(1, 2))
-par(mgp = c(2, 0.75, 0), mar = c(3,4,3,1))
+par(mgp = c(2, 0.75, 0))
 plot(regfit_full, scale = "r2")
 plot(regfit_full, scale = "adjr2")
-plot(regfit_full, scale = "Cp")
-plot(regfit_full, scale = "bic")
-coef(regfit_full, 6)   # Look at top 6 features
-coef(regfit_full, 10)  # Look at top 10 features
 ```
 
-
+```{r plot_subsets2, fig.height = 7, fig.width = 12}
+par(mfrow = c(1, 2))
+par(mgp = c(2, 0.75, 0))
+plot(regfit_full, scale = "Cp")
+plot(regfit_full, scale = "bic")
+```
+```{r coeffs}
+coef(regfit_full, 6)   # Look at top 6 features; see ?coef::regsubsets, the `id =` argument
+coef(regfit_full, 10)  # Look at top 10 features
+```
 
 ## Forward and Backward Step-wise Selection
 ```{r stepwise_seln}
@@ -161,25 +161,22 @@ coef(regfit_fwd, 7)
 coef(regfit_bwd, 7)
 ```
 
-
-
-## Choosing Among Models
-
+## Cross validation
 ```{r Choosing_models}
 set.seed(1)
 train_lgl <- sample(c(TRUE, FALSE), nrow(Hitters), replace = TRUE)
-test_lgl  <- !train_lgl    # invert logical
+test_lgl  <- !train_lgl    # Invert logical
 head(train_lgl); head(test_lgl)
 regfit_best <- leaps::regsubsets(Salary ~ . ,
                                  data = Hitters[train_lgl, ],
                                  nvmax = 19)
 test_mat <- model.matrix(Salary ~ ., data = Hitters[test_lgl, ])
 ?model.matrix
-as.tibble(test_mat)    # view as a `tibble` to save space
+as.tibble(test_mat)    # View as a `tibble` to save space
 ```
 
-Let's try to figure out what's going on in the `purrr`
-iteration loop below by stepping through the first two iterations:
+Let's try to figure out what's going on in the `purrr` iteration loop below 
+by stepping through the first two iterations:
 
 ```{r dive_into_loop}
 # iter 1
@@ -195,7 +192,6 @@ coefi
 test_mat[, names(coefi)]%*%coefi %>% head()
 ```
 
-
 The `purrr` iteration that generates the test MSE for each size model:
 
 ```{r the_loop}
@@ -206,22 +202,26 @@ val_errors <- purrr::map_dbl(1:19, function(.i) {
 })
 
 val_errors
-which.min(val_errors)    # the 'best' model is one containing 10 predictors
-which.min(val_errors) %>% coef(regfit_best, .)   # with these coefficients
+which.min(val_errors)    # The 'best' model is one containing 10 predictors
+which.min(val_errors) %>% coef(regfit_best, .)   # Coefficients of best model
 ```
 
 
 
+## K-fold cross-validation
 
-### Define a S3 `predict` method
-There is no `predict` method for objects of class `regbubsets`, so we
+### Defining a S3 `predict` method, predict.regsubsets
+There is no `predict` method for objects of class `regsubsets`, so we
 will create our own to replicated the steps above and simplify things
 moving forward. S3 methods are not complicated, they just define a
 specific behavior for a given class object (first argument) they act on.
 
-
 ```{r defn}
 predict.regsubsets <- function(object, newdata, id, ...) {
+  # Original model formula is captured in the model object as the `call`
+  # We want to replecate this call internally during predictions
+  # First pull out the formula entry ([[2]]) and convert to a formula class
+  # This happens 'under-the-hood' in almost all S3 `predict()` methods
   form <- as.formula(object$call[[2]])
   #print(form)
   mat   <- stats::model.matrix(form, newdata)
@@ -231,32 +231,32 @@ predict.regsubsets <- function(object, newdata, id, ...) {
 }
 ```
 
-## Choosing Among Models: cross-validation
 
+Using the `predict.regsubsets()` method to perform k-fold cross validation:
 ```{r cv}
 regfit_cv <- leaps::regsubsets(Salary ~ ., data = Hitters, nvmax = 19)
 coef(regfit_cv, 10)
 
-
 # k-fold cross validation
+# Be aware of the difference between fold and folds!
 k <- 10
 set.seed(1)
 folds <- sample(1:k, nrow(Hitters), replace = TRUE)
 folds
 
 cv_errors <- list()     # pre-allocate an empty list
-# Loop required here for scoping reasons
-# so that it plays nice with our predict method
-# otherwise the `call` will not be correct
+
+# Loop required here for scoping reasons so that it plays nice 
+# with our predict method otherwise the `call` will not be correct
 for (fold in 1:k) {
   fit <- leaps::regsubsets(Salary ~ .,
                            data = Hitters[folds != fold, ],
                            nvmax = 19)
-  purrr::map_dbl(1:19, function(.i) {
-    fold_data <- Hitters[folds == fold, ]     # subset only fold idx
-    pred <- predict(fit, fold_data, id = .i)  # this is our `predict`!
-    mean((fold_data$Salary - pred)^2)         # MSE
-  }) -> cv_errors[[fold]]    # RHS assignment! Can be cleaner code-wise
+    purrr::map_dbl(1:19, function(.i) {
+      fold_data <- Hitters[folds == fold, ]     # subset only fold idx
+      pred <- predict(fit, fold_data, id = .i)  # this is our `predict()`!
+      mean((fold_data$Salary - pred)^2)         # MSE
+    }) -> cv_errors[[fold]]    # RHS assignment! Can be cleaner coding style-wise
 }
 
 # 19 values for each fold
@@ -285,17 +285,12 @@ leaps::regsubsets(Salary ~ ., data = Hitters, nvmax = 19) %>%
 ```
 
 
-
 -----------------------------
 
-
-
-# Shrinkage Methods
-
-## Ridge Regression I
+# Shrinkage methods: Ridge Regression
 We redefine the `Hitters` data set to include only the model matrix `x`
-containing features (predictors) and a separate `y` variable
-for the `Response` (Salary).
+containing features (predictors) and a separate `y` variable for
+the `Response` (Salary).
 
 ```{r ridge_data}
 x <- model.matrix(Salary ~ ., Hitters)[, -1]   # remove Intercept column
@@ -305,13 +300,13 @@ summary(y)           # S3 method for numerics
 y %>% data.frame() %>%
   magrittr::set_names("Salary") %>%     # rename `y` for the plot
   ggplot(aes(x = Salary)) +
-  geom_histogram(aes(y = ..density..), fill = 'gray', colour = 'black') +
+  geom_histogram(aes(y = ..density..), fill = "gray", colour = "black") +
   geom_density(alpha = 0.2, fill = "blue")
 ```
 
-
-Now perform a sweep across the tuning parameter `lambda` using
-the `glmnet::glmnet` function.
+## Range of smoothing parameters
+Perform a sweep across the tuning parameter `lambda` using the 
+`glmnet::glmnet()` function.
 
 ```{r ridge_regression}
 # lambda = 10^{10} effectively reduces the model to the mean; upper extreme
@@ -337,7 +332,7 @@ class(ridge_model1)
 ridge_model1$lambda[50]
 coef(ridge_model1)[, 50]
 sqrt(sum(coef(ridge_model1)[-1, 50]^2))
-sqrt(sum(coef(ridge_model1)[2:20, 50]^2))
+# sqrt(sum(coef(ridge_model1)[2:20, 50]^2))
 
 # Select the 60th value of the penalty parameter lambda
 # This value should be smaller as lambda decreases
@@ -348,20 +343,19 @@ sqrt(sum(coef(ridge_model1)[-1, 60]^2))
 # Find coefficients for penalty parameter (lambda) = 50; `s = `
 predict(ridge_model1, s = 50, type = "coefficients")[1:20, ]
 
-# x = 50 is bracketed by the 69th and 70th penalties
-ridge_model1$lambda[69]
-coef(ridge_model1)[, 69]
-ridge_model1$lambda[70]
-coef(ridge_model1)[, 70]
+# Exercise: Show x = 50 is bracketed by the 69th and 70th penalties
+# coef(ridge_model1)[, 69]
+# ridge_model1$lambda[70]
+# coef(ridge_model1)[, 70]
+# ridge_model1$lambda[69]
 ```
 
-
-## Ridge Regression II
+## Cross validation
 We now split the `Hitters` (now `x`) data set into a **training** and **test**
 set to get a better estimate of how the model might perform on samples it
 has not *"seen"* and/or trained on.
 
-```{r ridge_regression2}
+```{r ridge_regression_cv}
 # Create training and test sets as above
 set.seed(1)
 n      <- nrow(x)            # number of total samples
@@ -371,7 +365,7 @@ y_test <- y[test]
 
 # Estimating the test error via `glmnet`
 ridge_model2 <- glmnet::glmnet(x[train, ], y[train],  # subset `x` into training set
-                               alpha  = 0,            # do ridge-regression
+                               alpha  = 0,            # ridge-regression alpha = 0
                                lambda = grid,         # use same grid as above
                                thresh = 1e-12)
 ridge_pred <- predict(ridge_model2,            # S3 glmnet predict function
@@ -380,39 +374,37 @@ ridge_pred <- predict(ridge_model2,            # S3 glmnet predict function
 
 mean((ridge_pred - y_test)^2)                  # Calculate test MSE
 
-# Exploring limits: large lambda
-# Predicting using the mean of the training data
+# Exploring limits: large lambda vs mean of the training data
 mean((mean(y[train]) - y_test)^2)
 
 # An extremely large penalty essentially reduces beta_1 to beta_p to be zero
 # i.e., the prediction becomes the mean for all predictors
 ridge_pred2 <- predict(ridge_model2, s = 1e10, newx = x[test, ])
 mean((ridge_pred2 - y_test)^2)             # MSE
+```
 
-
-# Exploring limits: small lambda
+## Exploring limits
+```{r Ridge regression: Exploring limits}
+# Exploring limits: zero lambda vs linear regression
 ridge_pred3 <- predict(ridge_model2,
                        s = 0,             # lambda = 0; un-penalized; see `lm()`
                        newx = x[test, ])  # subset to test set
 mean((ridge_pred3 - y_test)^2)            # calculate test MSE
 
-# Compare results with simple linear model
-# without penalty
-stats::lm(y ~ x, subset = train)      # better output for un-penalized model
+# Compare results with simple linear model without penalty
+stats::lm(y ~ x, subset = train)          # better output for un-penalized model
 
 # Use type = 'coefficients' to return coeffs
 # Note: very close approximation to the linear model with least squares
 predict(ridge_model2, s = 0, type = "coefficients")[1:20, ]
 ```
 
-
-
-## Ridge Regression III: cross-validation
-It is better to use cross-validation to estimate *best* lambda. Luckily, there
-is a build in function `glmnet::cv.glmnet` provided for this purpose.
+## K-fold cross-validation
+It is better to use cross-validation to estimate *best* lambda. Luckily,
+there is a build in function `glmnet::cv.glmnet` provided for this purpose.
 By default, `K = 10` cross-validation is performed.
 
-```{r ridge_regression3}
+```{r ridge_regression_Kfold_cv}
 set.seed(1)
 ridge_cv <- cv.glmnet(x[train, ],  # subset training `predictor matrix`
                       y[train],    # subset training `response vector`
@@ -437,22 +429,26 @@ full_fit_ridge <- glmnet::glmnet(x, y, alpha = 0)
 predict(full_fit_ridge, type = "coefficients", s = lambda_star)[1:20, ]
 ```
 
-
 -------------------------------
 
+# Shrinkage methods: The Lasso
 
-## The Lasso
-
+## Range of smoothing parameters
 ```{r lasso}
-lasso_model <- glmnet::glmnet(x[train, ],  # subset training `predictor matrix`
-                              y[train],    # subset training `response vector`
+lasso_model <- glmnet::glmnet(x[train, ],      # subset training `predictor matrix`
+                              y[train],        # subset training `response vector`
                               alpha = 1,       # now alpha = 1; lasso
                               lambda = grid)   # same lambda search grid
 
-# Plot coefficients as a function of penalty parameter
-# using built-in S3 plot method
+# Plot coefficients as a function of penalty parameter using
+# built-in S3 plot method
 plot(lasso_model)
+```
 
+
+
+## K-fold cross validation
+```{r lasso_kfold_cv}
 # Once again, use k-fold cross validation (default K = 10)
 set.seed(1)
 lasso_cv <- glmnet::cv.glmnet(x[train, ], y[train], alpha = 1)
@@ -461,10 +457,10 @@ lasso_cv <- glmnet::cv.glmnet(x[train, ], y[train], alpha = 1)
 plot(lasso_cv)
 lambda_star2 <- lasso_cv %>%
   purrr::pluck("lambda.min")
-lasso_pred   <- predict(lasso_model,        # training set fitted model
-                        s = lambda_star2,   # predict using lambda*
-                        newx = x[test, ])   # predict on test set
-mean((lasso_pred - y_test)^2)               # calculate test MSE
+lasso_pred   <- predict(lasso_model,        # Training set fitted model
+                        s = lambda_star2,   # Predict using lambda*
+                        newx = x[test, ])   # Predict on test set
+mean((lasso_pred - y_test)^2)               # Calculate test MSE
 
 # Now that we know lambda*, fit on *full* data set
 full_fit_lasso <- glmnet(x, y, alpha = 1, lambda = grid)
@@ -473,7 +469,7 @@ lasso_coeffs   <- predict(full_fit_lasso,        # glmnet fit on full data
                          s = lambda_star2)[1:20, ]
 lasso_coeffs
 
-# Some Betas (coeffs) are zero as expected
+# Some Betas (coeffs) are zero as expected.
 # Remove them to get a better look at the model
 lasso_coeffs %>%
   magrittr::extract(. != 0)
@@ -481,6 +477,43 @@ lasso_coeffs %>%
 
 
 
+
+
+<!-- 
+#SJT comments
+## Major
+
+## Minor
+* Line 64: reg.summary(names) only gives first eight!
+  + It looks like this is the default behavior coming of `regsubsets()`
+    Though you seem to have solved this issue by passing nvmax = 19
+* Line 108: All 4 plots stored in variable `reg_plots`???
+  + Unfortunately no, you cannot do this while using the grid plotting of
+    gridExtra::grid.arrange(). There is a hack by putting them into a list 
+    object (as you suggest) but then you have to do some gymnastics to get 
+    the grid to work:
+    do.call(grid.arrange, reg_plots, ncol = 2). I just didn't feel like explaining
+    this complexity, and thought the way it is was simple to understand as it stood.
+* Line 201: In the predict function it is tricky to explain what 
+  form <- as.formula(object$call[[2]]) is doing. It might be worth commenting.
+  + We are just pulling out the model specification (formula) from the original call
+    so that we can replicated it internally and use it during prediction.
+    This happens under-the-hood in almost every predict() method.
+    I have added some additional clarification to the predict() function.
+* Line 225: Using for loop instead of purrr ??? (I am sensitized by the issue in lab05)
+  + I don't have a problem here, and unfortunately cannot reproduce yours 
+    from Lab05. I also don't know where this is any more, since line 225 is no
+    longer in the same place! Lets discuss if you feel strongly about it.
+    It seems to be fine for now ...
+    
+  + NOTE: you commented out a ggplot::qplot(), I assumed this was during testing
+    and you simply forgot to un-comment it back when you were done, so I 
+    did so.
+-->
+
+
+
 -------------------------------
 
-Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.
+Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown)
+(v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.
