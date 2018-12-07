@@ -275,7 +275,7 @@ title(main = "7-leaf classification tree for carseats")
 
 # Calculate performance metrics
 yhat_1 <- predict(prune_boston, newdata = test_boston)
-mse1  <- mean((yhat_1 - test_boston$medv)^2)
+mse1   <- mean((yhat_1 - test_boston$medv)^2)
 mse1
 
 # Plotting predictions via `ggplot`
@@ -403,8 +403,8 @@ gridExtra::grid.arrange(gg$mtry, gg$ntree, ncol = 2)   # plot in 1x2 grid
 --------------------------------
 
 # Boosting
-Boosting is performed via the `gbm` package in `R`, which fits "Generalized
-Boosted Regression Models". Recall that:
+Boosting is performed via the `gbm::gbm()` function in `R`, which fits
+"Generalized Boosted Regression Models". Recall that:
 
   * Argument `distribution = "gaussian"` fits regression models
   * Argument `distribution = "bernoulli"` fits classification models
@@ -420,19 +420,18 @@ summary(gbm_boston1)
 ```
 
 
-```{r plotting, fig.width = 9, fig.height=5}
+```{r plotting_gbms, fig.width = 9, fig.height = 5}
 # Partial dependence plots illustrate the marginal effect of the
 # selected variables on the response after integrating out the other variables
-plot.gbm(gbm_boston1, i = "rm",     # built-in S3 plot method
-  main = "Marginal effect of \n number of rooms")
-plot.gbm(gbm_boston1, i = "lstat",
-  main = "Marginal effect of \n % lower status")
+# Using the built-in S3 plot method `plot.gbm()`
+plot(gbm_boston1, i = "rm", main = "Marginal effect of \n number of rooms")
+plot(gbm_boston1, i = "lstat", main = "Marginal effect of \n % lower status")
 ```
+
 
 
 ## Choice of shrinkage parameter
 ```{r predicting, warning = FALSE}
-
 # Shrinkage parameter = 0.001 (default)
 yhat_gbm1 <- predict(gbm_boston1, newdata = dplyr::select(test_boston, -medv),
                      n.trees = 5000)
@@ -499,6 +498,27 @@ cart_imp <- varImp(cart_caret, scale = FALSE,
 caret_gg$imp <- ggplot(cart_imp, top = 7) + xlab("")
 caret_gg %>%
   purrr::invoke(gridExtra::grid.arrange, ., ncol = 2)
+```
+
+
+
+
+
+
+# Appendix: New CART plotting package `rpart.plot`
+There is a relatively new package available on `CRAN` called `rpart.plot`,
+and it's aim is to simplify the plotting of `rpart` class objects as well as
+improve their appearance. Admittedly, displaying all the information contained
+in a CART model is a daunting task to say the least!
+We leave it to you to decide if the authors have achieved their objective, but 
+here are some examples from earlier in this Lab:
+```{r rpart_plot}
+# Copare to the initial tree in Section: Classification Trees
+library(rpart.plot)
+rpart::rpart(High ~ ., data = dplyr::select(Carseats, -Sales, -id),
+             model = TRUE) %>%
+  rpart.plot(digits = 4, shadow.col = "grey50", extra = 103,
+             main = "CART tree for High/Low sales of carseats")
 ```
 
 
