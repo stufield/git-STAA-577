@@ -12,13 +12,13 @@ from_cran <- c(
   "rmarkdown",     # dynamic document generation in R; R notebooks
   "purrr",         # iteration
   "tibble",        # generate 'tibble' class data frames
-  "stringr"        # working with strings
+  "stringr",       # working with strings
   "ggplot2",       # plotting package beyond base plots
   "broom",         # summarizing models consistently
   "yardstick",     # calculating model performance metrics
   "dplyr",         # a grammar for data set manipulation
   "tidyr",         # reshaping data objects; long vs. wide
-  "tidyverse"      # general use 'tidy' data 
+  "tidyverse",     # general use 'tidy' data
   "gridExtra",     # plotting ggplots into grids
   "ISLR",          # many data sets: Intro to Stat Learning in R
   "gbm",           # generalzed boosted models
@@ -29,7 +29,7 @@ from_cran <- c(
   "e1071",         # SVM and naive Bayes
   "randomForest",  # fit random forest models
   "pROC",          # ROC curves
-  "rpart.plot",    # visualizing CART rpart models 
+  "rpart.plot"     # visualizing CART rpart models
 )
 
 # That install.packages command may additionally install over 100 more packages.

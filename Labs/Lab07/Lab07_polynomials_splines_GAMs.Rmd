@@ -201,23 +201,35 @@ data.frame(age = age, y = I(wage > 250)/5) %>%  #  0/1 -> 0/0.2
 ## Piecewise Constant
 ```{r pw_constant}
 table(cut(age, 4))     # Number of observations per bin if split age into 4 groups
-pw_fit <- stats::lm(wage ~ cut(age, 4), data = Wage)
-broom::tidy(pw_fit)
+pwc_fit <- stats::lm(wage ~ cut(age, 4), data = Wage) %>% 
+  broom::tidy()
+pwc_fit
 ```  
 
 
-Visualize the piecewise constant graphically:
-```{r pw_plot}
-# Define a variable `PieceWise` that groups `age`
-# according to the cut values, i.e. the piecewise linear models
+Visualize the piece-wise constant graphically:
+```{r pwc_plot}
+# 1) Define new variable `PieceWise` that groups `age` by the cut points above
+# 2) Use `dplyr::recode()` to map those cut points to values
+# corresponding to the y-intercepts of the model
 tbl <- tibble::tibble(age = age, wage = wage) %>%
-  dplyr::mutate(PieceWise = cut(age, 4))
-tbl     # quickly view data to be plotted; particularly `PieceWise`
+  dplyr::mutate(
+    PieceWise = cut(age, 4),
+    yint = dplyr::recode(PieceWise,
+      "(17.9,33.5]" = pwc_fit$estimate[1],                         # Intercept
+      "(33.5,49]"   = pwc_fit$estimate[1] + pwc_fit$estimate[2],   # Intercept + 2nd piece
+      "(49,64.5]"   = pwc_fit$estimate[1] + pwc_fit$estimate[3],   # Intercept + 3rd piece
+      "(64.5,80.1]" = pwc_fit$estimate[1] + pwc_fit$estimate[4]    # Intercept + 4th piece
+    )
+  )
+tbl     # quickly view data to be plotted; particularly `PieceWise` & `yint`
 tbl %>% 
   ggplot(aes(x = age, y = wage)) +
   geom_point(alpha = 0.25) +
-  geom_smooth(aes(color = PieceWise), method = "lm", se = FALSE) +
-  geom_vline(xintercept = c(33.5, 49, 64.5), colour = "blue", linetype = "dashed")
+  geom_step(aes(x = age, y = yint, color = PieceWise), size = 1.5) +
+  geom_vline(xintercept = c(33.5, 49, 64.5), colour = "blue",
+             linetype = "dashed") + 
+  labs(title = "Piecewise Constant")
 ```
 
 
