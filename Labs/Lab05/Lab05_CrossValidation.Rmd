@@ -1,5 +1,5 @@
 ---
-title: 'STAA 577: Laboratory Five </br> Cross validation (`tidyverse`)'
+title: 'STAA 577: Laboratory Five </br> Cross Validation (`tidyverse`)'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
@@ -31,10 +31,10 @@ library(ISLR)         # Auto data set
 
 # The `Auto` Data Set
 ```{r data, include = TRUE}
-Auto %<>% as.tibble()
+Auto %<>% as.tibble()                     # Convert -> tibble
 class(Auto)                               # Confirm Auto is now a tibble
 names(Auto)                               # List variables
-Auto                                      # Print the top 10
+Auto                                      # Print tibble; top 10 by default
 Auto %>%                                  
   ggplot(aes(x = horsepower, y = mpg)) +  # Plot hp vs mpg
   geom_point(alpha = 0.5) +               # Create a scatter plot
@@ -85,7 +85,6 @@ purrr::map_dbl(1:5,
 
 # Leave-One-Out CV (`boot::cv.glm`)
 
-
 ```{r LOOCV}
 # Linear regression using glm
 glm_fit <- stats::glm(mpg ~ horsepower, data = Auto)
@@ -94,8 +93,23 @@ cv_err$K            # Default K = n; i.e. LOOCV
 cv_err$delta
 ```
 
+
 ```{r LOOCV_poly}
 # Loop over polynomial power
+purrr::map_dbl(1:5, function(.x) {
+  fit <- stats::glm(mpg ~ stats::poly(horsepower, degree = .x),
+                    data = Auto)
+  boot::cv.glm(Auto, fit) %>%
+  purrr::pluck("delta") %>%     # Retrieve the `delta` element
+  purrr::pluck(1)               # Extract the first component of `delta`
+})
+```
+
+
+```{r LOOCV_poly_2, eval = FALSE, echo = FALSE}
+# Loop over polynomial power
+# This chunk not currently run
+# the raw = TRUE issue resolved
 purrr::map_dbl(1:5, function(.x) {
   fit <- stats::glm(mpg ~ stats::poly(horsepower, degree = .x, raw = TRUE),
                     data = Auto)
@@ -110,20 +124,6 @@ purrr::map_dbl(1:5, function(.x) {
 
 
 # K-fold CV (`boot::cv.glm`)
-```{r k-fold_cross_validation}
-set.seed(17)
-# K-folds chosen at random; here K = 10
-# Loop over polynomial power
-# Question: why didn't we set the seed above in LOOCV?
-purrr::map_dbl(1:10, function(.x) {
-  fit <- stats::glm(mpg ~ stats::poly(horsepower, degree = .x, raw = TRUE), data = Auto)
-  boot::cv.glm(Auto, fit, K = 10) %>%
-    purrr::pluck("delta") %>%
-    purrr::pluck(1)
-})
-```
-
-A salutary lesson on how `R` thinks about polynomials
 
 ```{r k-fold_cross_validation_orthogonal_polynomials}
 set.seed(17)
@@ -211,17 +211,7 @@ lm(mpg ~ horsepower + I(horsepower^2), data = Auto) %>%
 ```
 
 
-<!--
-# Comments
-## Major
-### The first LOOCV loop over the polynomial power mysteriously crashes on the second time through the loop. Lines 93--100. The syntax is identical to lines 122--126 and the loop completes successfully if I introduce K=10 say to the boot::cv.glm command. 
-
-## FIXED BY SJT:  You do not want to use "raw" polynomials!
-
-* I could not reproduce this error, the poly(raw = TRUE) is the same as poly(raw = FALSE)
- -->
-
 -------------------------
 
-Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown)
+Created on `r Sys.Date()` by [Rmarkdown](https://github.com/rstudio/rmarkdown)
 (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.

@@ -60,6 +60,7 @@ biplot(pr_out, scale = 0)
 ```
 
 
+
 ```{r singular_vals, fig.width = 8}
 # Singular values
 pr_out$sdev
@@ -69,7 +70,7 @@ pve <- pr_var / sum(pr_var)
 pve
 # pve/pr_var
 
-v1 <- ggplot2::qplot(x = seq_along(pve),  # convenience wrapper `qqplot()`
+v1 <- ggplot2::qplot(x = seq_along(pve),  # `qplot()` is convenience wrapper `ggplot()`
                      y = pve) +           # allows plotting 2 vectors w/o data.frame
   geom_point(alpha = 0.9, colour = "navy", size = 2.5) +
   geom_line(colour = "navy", size = 1) +
@@ -171,6 +172,7 @@ km_4_20start$tot.withinss
 ------------------------
 
 # Hierarchical Clustering
+
 Using the same data set::
 * (a) **complete**: compute all pairwise distances and choose the largest
 * (b) **average**:  compute all pairwise distances and compute the average
@@ -193,6 +195,9 @@ cutree(hc_single, 2)
 cutree(hc_single, 4)
 ```
 
+
+--------------------------
+
 ## Scale before clustering
 ```{r scaling, fig.width = 10}
 # Scale before clustering
@@ -214,8 +219,10 @@ cutree(hc_scaled_single, 2)
 ```
 
 
+-------------------------
+
 ## Distance based on correlation
-```{r doubtful}
+```{r correlation}
 # Distance based on correlation
 # Both dist() and 1-cor() produce symmetric matrices with zero on the diagonal
 dtmp <- matrix(rnorm(10 * 3), ncol = 3) %>%        # 10x3 matrix of random data
@@ -240,14 +247,7 @@ matrix(rnorm(30 * 3), ncol = 3) %>%        # 10x3 matrix of random data
 
 
 
-<!--
-# SJT:
-* Note change to correlation example
-  + Yeah, this example looks a little off, I labeled the chunk as 
-    "doubtful" because I wasn't sure if you would keep it. In your class notes
-    it doesn't look like you covered this example (though you may have verbally)
--->
-
 ------------------------------
 
-Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.
+Created on `r Sys.Date()` by [Rmarkdown](https://github.com/rstudio/rmarkdown)
+(v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.

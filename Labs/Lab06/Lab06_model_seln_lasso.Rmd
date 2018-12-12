@@ -1,5 +1,5 @@
 ---
-title: 'STAA 577: Laboratory Six </br> Subset selection (`tidyverse`)'
+title: 'STAA 577: Laboratory Six </br> Subset Selection (`tidyverse`)'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
@@ -87,27 +87,27 @@ tibble::tibble(
 )
 
 # RSS
-p_rss <- qplot(seq_along(reg_summary$rss), reg_summary$rss,
+p_rss <- ggplot2::qplot(seq_along(reg_summary$rss), reg_summary$rss,
       xlab = "Number of Variables", ylab = "RSS") +
   geom_line()
 
 # Adjusted R^2
 pt_adjr2 <- which.max(reg_summary$adjr2)   # index of max feature
-p_adjr2  <- qplot(seq_along(reg_summary$adjr2), reg_summary$adjr2,
+p_adjr2  <- ggplot2::qplot(seq_along(reg_summary$adjr2), reg_summary$adjr2,
                   xlab = "Number of Variables", ylab = "Adjusted RSq") +
   geom_line() +
   geom_point(aes(x = pt_adjr2, y = reg_summary$adjr2[pt_adjr2]),
              colour = "red", size = 3)
 # CP
 pt_cp <- which.min(reg_summary$cp)   # index of min feature
-p_cp  <- qplot(seq_along(reg_summary$cp), reg_summary$cp,
+p_cp  <- ggplot2::qplot(seq_along(reg_summary$cp), reg_summary$cp,
                xlab = "Number of Variables", ylab = "Cp") +
   geom_line() +
   geom_point(aes(x = pt_cp, y = reg_summary$cp[pt_cp]),
              colour = "red", size = 3)
 
 pt_bic <- which.min(reg_summary$bic)
-p_bic  <- qplot(seq_along(reg_summary$bic), reg_summary$bic,
+p_bic  <- ggplot2::qplot(seq_along(reg_summary$bic), reg_summary$bic,
                 xlab = "Number of Variables", ylab = "BIC") +
   geom_line() +
   geom_point(aes(x = pt_bic, y = reg_summary$bic[pt_bic]),
@@ -479,42 +479,7 @@ lasso_coeffs %>%
 
 
 
-
-<!-- 
-#SJT comments
-## Major
-
-## Minor
-* Line 64: reg.summary(names) only gives first eight!
-  + It looks like this is the default behavior coming of `regsubsets()`
-    Though you seem to have solved this issue by passing nvmax = 19
-* Line 108: All 4 plots stored in variable `reg_plots`???
-  + Unfortunately no, you cannot do this while using the grid plotting of
-    gridExtra::grid.arrange(). There is a hack by putting them into a list 
-    object (as you suggest) but then you have to do some gymnastics to get 
-    the grid to work:
-    do.call(grid.arrange, reg_plots, ncol = 2). I just didn't feel like explaining
-    this complexity, and thought the way it is was simple to understand as it stood.
-* Line 201: In the predict function it is tricky to explain what 
-  form <- as.formula(object$call[[2]]) is doing. It might be worth commenting.
-  + We are just pulling out the model specification (formula) from the original call
-    so that we can replicated it internally and use it during prediction.
-    This happens under-the-hood in almost every predict() method.
-    I have added some additional clarification to the predict() function.
-* Line 225: Using for loop instead of purrr ??? (I am sensitized by the issue in lab05)
-  + I don't have a problem here, and unfortunately cannot reproduce yours 
-    from Lab05. I also don't know where this is any more, since line 225 is no
-    longer in the same place! Lets discuss if you feel strongly about it.
-    It seems to be fine for now ...
-    
-  + NOTE: you commented out a ggplot::qplot(), I assumed this was during testing
-    and you simply forgot to un-comment it back when you were done, so I 
-    did so.
--->
-
-
-
 -------------------------------
 
-Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown)
+Created on `r Sys.Date()` by [Rmarkdown](https://github.com/rstudio/rmarkdown)
 (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.

@@ -223,15 +223,36 @@ predict(glm_fit2,
 
 ## Linear Discriminant Analysis (LDA)
 
-```{r LDA}
+```{r LDA1, fig.height = 7}
 lda_fit <- MASS::lda(Direction ~ Lag1 + Lag2, data = train)
 class(lda_fit)
 lda_fit
-plot(lda_fit, type = "hist", col = "grey")     # S3 plot method; histogram/density/both
-lda_pred <- predict(lda_fit, newdata = test)   # S3 predict method
-head(lda_pred$x, 20)           # scores each class
-max(lda_pred$x)                # maximum score
-min(lda_pred$x)                # minimum score
+# plot histogram/density/both for the `training`(!) set; split by class labels
+plot(lda_fit, type = "hist", col = "grey")     # S3 plot method
+# Predict on the `test` set
+# S3 predict method for class `lda` (above) returns 3 elements:
+#   class     = the class prediction for each observation (prob. >= 0.5 cutoff)
+#   x         = the linear discriminats
+#   posterior = the posterior probabilities by class for each observation
+lda_pred <- predict(lda_fit, newdata = test)   
+head(lda_pred$x, 20)           # scores (linear discriminants) for each class
+range(lda_pred$x)              # min/max score
+```
+
+
+**Sidenote:** To convince yourself that the `plot()` method above plots
+the linear discriminants of the *training* set by default,
+run the code below yourselves and compare:
+
+```{r LDA2, eval = FALSE}
+lda_pred_easy <- predict(lda_fit, newdata = train) # `predict()` on training set
+lda_pred_easy %>%
+  purrr::pluck("x") %>%            # pull out 'x'; linear discriminants
+  hist(prob = TRUE, col = "grey",  # plot 'x' in histogram
+       main = "", xlab = "Up/Down Combined")
+```
+
+```{r LDA3}
 head(lda_pred$posterior, 20)   # posterior probabilities each class
 head(lda_pred$class, 20)       # predicted class
 lda_class <- lda_pred$class    # predicted class
@@ -267,7 +288,7 @@ sum(lda_pred$posterior[, "Down"] > 0.9)   # none are predicted at 0.9 or above
 
 ## Quadratic Discriminant Analysis (QDA)
 ```{r QDA}
-qda_fit <- qda(Direction ~ Lag1 + Lag2, data = train)
+qda_fit <- MASS::qda(Direction ~ Lag1 + Lag2, data = train)
 qda_fit
 qda_class <- predict(qda_fit, newdata = test)$class
 
@@ -301,21 +322,23 @@ spec
 
 ## K = 1
 ```{r KNN}
-training_classes <- train$Direction
-train %<>% dplyr::select(Lag1, Lag2)
+training_classes <- train$Direction  # KNN models pass true classes separately
+knn_train    <- dplyr::select(train, Lag1, Lag2)  # and remove `Direction`
 test_classes <- test$Direction
-test  %<>% dplyr::select(Lag1, Lag2)
+knn_test     <- dplyr::select(test, Lag1, Lag2)
 set.seed(1)
 
 # Smallest neighborhood, K = 1
-knn_pred_class <- class::knn(train, test, training_classes, k = 1)
+knn_pred_class <- class::knn(train = knn_train,
+                             test = knn_test,
+                             cl = training_classes, k = 1)
 
 # Confusion matrix
 cmat <- table(truth = test_classes, pred = knn_pred_class)
 addmargins(cmat)
 
 # Accuracy: Really bad for K = 1!
-acc <- sum(diag(cmat)) / sum(cmat)    # coin flip!
+acc <- sum(diag(cmat)) / sum(cmat)    # a coin flip!
 acc
 
 # Sanity check
@@ -335,33 +358,18 @@ spec
 Iterate over `K = 1, 2, ..., 10` using `purrr::map_df()`.
 
 ```{r varyK}
-purrr::map_df(1:10, function(x) {
-  cmat <- class::knn(train, test, training_classes, k = x) %>%
+purrr::map_df(1:10, function(.x) {
+  cmat <- class::knn(knn_train, knn_test, training_classes, k = .x) %>%
     table(truth = test_classes, pred = .)
-    data.frame(K    = x,
-               acc  = sum(diag(cmat)) / sum(cmat),
-               sens = prop.table(cmat["Up", ])[2],
-               spec = prop.table(cmat["Down", ])[1])
+  tibble::tibble(K    = .x,
+                 acc  = sum(diag(cmat)) / sum(cmat),     # accuracy
+                 sens = prop.table(cmat["Up", ])[2],     # sensitivity
+                 spec = prop.table(cmat["Down", ])[1])   # specificity
 })
 ```
 
 
-<!--
-# Comments
-## Major
-### Something odd is going on with the histogram of LDA discriminants. The maximum and minimum values are much smaller in magnitude than indicated by the histogram.
-
-* This is (partly) because we use the default S3 `plot()` method coming from
-the `MASS` package. We do not have much control over what happens under the 
-hood. Could it be a difference in the training vs. test sets? I expect
-the plots would be for the training set only (part of the model object), 
-and the min/max you calculate are for the test set, coming from `predict()`. 
-So they are different data, but I wouldn't expect them to be too
-different unless the test set is a much smaller subset
-* Upon looking at the code in `MASS:::plot.lda()`, it looks also like there
-is some centering/scaling happening, and its determined by `lda_fit$scaling`.
--->
-
 ----------------------------
 
-Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.
+Created on `r Sys.Date()` by [Rmarkdown](https://github.com/rstudio/rmarkdown)
+(v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.

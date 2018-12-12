@@ -16,13 +16,13 @@ fontsize: 12pt
 
 
 Load necessary libraries for simulation:
-```{r, echo = FALSE, results = FALSE}
+```{r, message = FALSE, echo = FALSE, results = FALSE}
 library(tibble)
 library(magrittr)
 library(stringr)
 library(dplyr)
 library(ggplot2)
-library(reshape2)
+library(tidyr)
 library(purrr)
 library(pROC)
 library(yardstick)
@@ -41,12 +41,18 @@ theme_set(thm)
 
 
 # What is Gini Importance?
-Every time a split of a node is made on variable `m` the *Gini Impurity* (`G`) criterion for the two child nodes is less than the parent node. Adding up the gini "losses" for each feature over all trees in the forest gives a fast variable importance that is often very consistent with the permutation importance measure. Thus `G` is calculated as:
+Every time a split of a node is made on variable `m` the *Gini Impurity* (`G`)
+criterion for the two child nodes is less than the parent node. Adding up the
+gini "losses" for each feature over all trees in the forest gives a fast
+variable importance that is often very consistent with the permutation
+importance measure. Thus `G` is calculated as:
 
 $$G = \sum_{i=1}^{n_c} p_i(1 - p_i),$$
 
-where $n_c$ is the number of classes in the target variable and $p_i$ is the ratio of this class.
-A convenient property of the Gini impurity metric `G` is that it allows one to calculate a *theoretical maximum* that is based **solely** on the initial class distribution:
+where $n_c$ is the number of classes in the target variable and $p_i$ is the
+ratio of this class. A convenient property of the Gini impurity metric `G`
+is that it allows one to calculate a *theoretical maximum* that is based
+**solely** on the initial class distribution:
 ```{r}
 # @param x A vector of the initial true classes
 gini_max <- function(x) {
@@ -57,7 +63,10 @@ gini_max <- function(x) {
 ```
 
 ## Gini Example
-For a two-class problem, the `G` is maximized at equal class proportions, and minimized for either homogeneous case. **Note:** the goal is to *minimize* `G`:
+For a two-class problem, the `G` is maximized at equal class proportions,
+and minimized for either homogeneous case.
+**Note:** the goal is to *minimize* `G`:
+
 ```{r}
 theme_set(theme_gray())
 gini_fun <- function(p) 2 * p * (1 - p)        # does this look familiar?
@@ -99,10 +108,12 @@ tail(gini_data)
 
 
 # Plot Simulated Data
-Let's just make sure we've simulated what we think we have and check that the class distributions look reasonable.
+Let's just make sure we've simulated what we think we have and
+check that the class distributions look reasonable.
+
 ```{r, fig.width = 8, fig.height = 7, fig.align = "center"}
 gini_data %>%
-  reshape2::melt(id.vars = "class", variable.name = "feature") %>%
+  tidyr::gather(key = "feature", value = "value", -class) %>%  # reshape -> long-format for plotting
   ggplot(aes(x = value, col = class)) +
     geom_density() +
     facet_wrap(~feature, ncol = 3)
@@ -124,7 +135,8 @@ full_model
 
 
 # Variable Importance Scores
-During bagging, variable importances scores for each tree are aggregated across all trees in the forest
+During bagging, variable importances scores for each tree are
+aggregated across all trees in the forest
 ```{r}
 randomForest::importance(full_model) %>%
   data.frame() %>%
@@ -138,7 +150,11 @@ randomForest::importance(full_model) %>%
 
 
 # OOB (out-of-bag) Samples
-We are going to take advantage of an under-appreciated quality of random forest models, the out-of-bag samples, which can be thought of as `pseudo-cross-validation`. This property will help avoid over-fitting during feature selection process below, though in a high-stakes model building setting you might still want a proper hold-out set for performance testing.
+We are going to take advantage of an under-appreciated quality of random 
+forest models, the out-of-bag samples, which can be thought of as
+`pseudo-cross-validation`. This property will help avoid over-fitting during
+feature selection process below, though in a high-stakes model building
+setting you might still want a proper hold-out set for performance testing.
 
 
 ## Performance on OOB samples
@@ -178,7 +194,9 @@ plot(roc_obj,
 
 
 # Backward Feature Selection
-Now that we have a sense of what a full model with all features might look like, can we determine the minimal set of features necessary to maintain a given performance (e.g. AUC).
+Now that we have a sense of what a full model with all features might look
+like, can we determine the minimal set of features necessary to maintain a
+given performance (e.g. AUC).
 ```{r}
 set.seed(100)                # match 1st model above
 models   <- list()
@@ -233,7 +251,9 @@ qplot(rev(seq(aucs)), aucs) +
 
 
 # Appendix: Theoretical Gini Max
-From the `gini_max` function above, we can write a function to plot the `Gini Importance` with a rescaled y-axis reflecting `I` as a proportion of the theoretical maximum:
+From the `gini_max` function above, we can write a function to plot the
+`Gini Importance` with a rescaled y-axis reflecting `I` as a proportion
+of the theoretical maximum:
 ```{r, fig.width = 8, fig.height = 9}
 plotGiniMax <- function(model, max) {
 
@@ -270,4 +290,5 @@ purrr::map(models, plotGiniMax, max = max_g) %>%
 
 
 
-Created on `r Sys.Date()` by the [rmarkdown package](https://github.com/rstudio/rmarkdown) (v`r utils::packageVersion("rmarkdown")`).
+Created on `r Sys.Date()` by [Rmarkdown](https://github.com/rstudio/rmarkdown)
+(v`r utils::packageVersion("rmarkdown")`).

@@ -1,5 +1,5 @@
 ---
-title: 'STAA 577: Laboratory Eight </br> Tree-based methods (`tidyverse`)'
+title: 'STAA 577: Laboratory Eight </br> Tree-based Methods (`tidyverse`)'
 author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
 date: "`r format(Sys.Date(), '%e %B %Y')`"
 output:
@@ -247,13 +247,16 @@ text(boston_tree, use.n = TRUE, cex = 0.8)
 ## Cross-validating trees 
 
 ```{r Regression_trees_cv}
-par(mfrow = c(1, 2))
-rpart::rsq.rpart(boston_tree)  # regression R^2 CV statistics
+# regression R^2 CV statistics
 # Produces two plots. The first plots the r-square (apparent and apparent - 
 # from cross-validation) versus the number of splits.
 # The second plots the Relative Error(cross-validation) +/- 1-SE from
 # cross-validation versus the number of splits
-par(mfrow = c(1, 1))
+par(mfrow = c(1, 2))
+rpart::rsq.rpart(boston_tree)  
+```
+
+```{r Regression_trees_cv_2}
 rpart::plotcp(boston_tree)     # plot complexity across tree size as above
 title("Tree Size")
 # The cptable in the fit contains the mean and standard deviation of 
@@ -351,13 +354,14 @@ mse4
 3. See laboratory *followup_notes* file: `gini_backward_rf.nb.html` for
    additional discussion about `Gini` importance.
 
-```{r gini}
+```{r gini, fig.height = 6, fig.width = 11}
 importance(rf_boston6)    # built-in S3 print method for class `randomForest`
 varImpPlot(rf_boston6)    # built-in S3 plot method for class `randomForest`
 ```
 
 
 ## Optimizing `mtry` and `ntree`
+
 We can iterate over possible values of `mtry` and `ntree` to obtain a view
 of how these parameters affect `mse`. We will do with with the `purrr`
 package and plot with `ggplot2` all in one pipe chain.
@@ -443,17 +447,19 @@ gbm_boston0.2 <- gbm::gbm(medv ~ ., data = train_boston,
                           distribution = "gaussian", n.trees = 5000,
                           interaction.depth = 4, shrinkage = 0.2,
                           verbose = FALSE)
-yhat.gbm0.2 <- predict(gbm_boston0.2,
+yhat_gbm0.2 <- predict(gbm_boston0.2,
                        newdata = dplyr::select(test_boston, -medv),
                        n.trees = 5000)
-mse6 <- mean((yhat.gbm0.2 - test_boston$medv)^2)
+mse6 <- mean((yhat_gbm0.2 - test_boston$medv)^2)
 mse6
 ```
 
 
 ---------------------------
 
+
 # Appendix: CART via `caret`
+
 The [caret](http://topepo.github.io/caret/index.html) package also provides
 a convenient framework for fitting cross-validated CART models in `R`.
 
@@ -502,16 +508,18 @@ caret_gg %>%
 
 
 
-
+------------------------
 
 
 # Appendix: New CART plotting package `rpart.plot`
+
 There is a relatively new package available on `CRAN` called `rpart.plot`,
 and it's aim is to simplify the plotting of `rpart` class objects as well as
 improve their appearance. Admittedly, displaying all the information contained
 in a CART model is a daunting task to say the least!
 We leave it to you to decide if the authors have achieved their objective, but 
 here are some examples from earlier in this Lab:
+
 ```{r rpart_plot}
 # Copare to the initial tree in Section: Classification Trees
 library(rpart.plot)
@@ -529,18 +537,7 @@ rpart::rpart(High ~ ., data = dplyr::select(Carseats, -Sales, -id),
 
 
 
-<!--
-# Comments SJT 
-## Major -- caused in large part by the use of rpart!!
-* In do not fully understand rpart::rsq.rpart.
-  Is the apparent and relative r-squared terminology common?
-  + No, I actually don't understand it myself, but hoped you had covered it
-    in class. I typically use relative Rsq. This seems like a weird oddity
-    of rpart.
--->
-
-
 -----------------------------
 
-Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown)
+Created on `r Sys.Date()` by [Rmarkdown](https://github.com/rstudio/rmarkdown)
 (v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.

@@ -286,15 +286,12 @@ tune_svm <- e1071::tune(svm, y ~ ., data = svm_train, kernel = "radial",
                                       gamma = c(0.5, 1, 2, 3, 4)))
 summary(tune_svm)
 
-tuned_svm_df <- data.frame(
+tuned_svm_df <- tibble::tibble(
   true_class      = svm_test$y,
+  # Warning in `predict()`: be sure to use a `newdata =` argument!
+  # Anything else, e.g. `newx =`, may lead to unintended consequences
   predicted_class = predict(tune_svm$best.model,
-                            #newx = dplyr::select(svm_test, -y))
-                            # note: `newx` != `newdata` !!!
-                            # textbook may have an error here
                             newdata = dplyr::select(svm_test, -y))
-  # There is no `newx` argument to `predict()`; you want `newdata`
-  # THIS IS A DIABOLICAL EDGE CASE; but on that arises when using `predict`
 )
 
 class(svm_test$y)
@@ -359,6 +356,8 @@ With *sensitivity* (true positives) in [0, 1] and *1-specificity*
 (false positivies) also in [0,1], the total plotting area is 1.0, and 
 the "area under the curve" (AUC) can be used as a performance metric.
 For SVM, the usual cutoff for determine the class would be zero.
+The ISLR text uses the `ROCR` to generate ROC curves, we will use a somewhat
+newer, more popular(?), package ... `pROC`.
 
 
 ## Using `pROC::roc()`
@@ -369,7 +368,7 @@ optimal SVM, with $\gamma = 2$ and `cost = 1`.
 ```{r roc, message = FALSE, warning = FALSE, fig.width = 5, fig.height = 5}
 # To obtain class probabilities rather than class predictions, use the decision.values = TRUE argument
 svm_optimal <- e1071::svm(y ~ ., data = svm_train, kernel = "radial",
-                          gamma = 1, cost = 1, decision.values = TRUE)
+                          gamma = 2, cost = 1, decision.values = TRUE)
 
 # These "probabilities" are actually ratios
 train_prob <- predict(svm_optimal, newdata = svm_train,
@@ -411,13 +410,16 @@ roc_test %>%
        legacy.axes = TRUE)
 ```
 
-Recall that:
-* Sensitivity = true positive rate
-* 1-specificity = false positive rate
+
+**Recall that:**
+
+> * Sensitivity = true positive rate
+> * 1-specificity = false positive rate
 
 
 
 ## Using `ggplot2` to generate ROC curves
+This code is not run, but shows one way to generate ROC curves using `ggplot2`.
 ```{r ggroc, eval = FALSE}
 ggroc <- function(roc, showAUC = TRUE, interval = 0.2,
                   breaks = seq(0, 1, interval)) {
@@ -443,35 +445,8 @@ ggroc <- function(roc, showAUC = TRUE, interval = 0.2,
 
 
 
-
-<!-- # SJT comments
-## Major
-* I do not understand the coefs or rho output from svm. I want to drop these.
-  The only sensible IMHO thing the coefs can be are the coefficients 
-  \hat\alpha that appear in equation (12.17), page 421 of ESL 2nd edition.
-  This comes from expressing the SVM as a quadrative programming problem
-  and considering the Kuhn-Tucker optimality conditions. 
-  + This is up to you, feel free to drop if needed.
-* I think I understand the ROC curves now, but I want to discuss. 
-  + No problem. Love ROCs, they're a pretty integral part of what we do in BI.
-## Minor
-* What is the NULL trick in ggplot2?
-  + if you add an extra line at the end `+` \n NULL, then you can comment out
-    lines above and it will not break because there is a missing `+` sign
-    at the bottom. For debugging while you're plotting. I've learned this trick
-    and now I use it so much I just do it every time I make a ggplot.
-* I don't understand your comment about a diabolical edge case
-  +
-* Error creating notebook. See line 298
-  + Looks like the `yardstick` package changed the format of what 
-    comes out of `yardstick::accuracy()`, and probably the other similar functions,
-    so we were indexing something what wasn't there. Looks like you were on
-    the right track. Just make sure you have yardstick >=0.0.2 and dplyr >= 0.7.8
-    It should work (this had me out of commission for about 1h trying to figure it out)
- -->
-
 -----------------------------
 
-Created on `r Sys.Date()` by the [Rmarkdown package](https://github.com/rstudio/rmarkdown)
-(v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.
 
+Created on `r Sys.Date()` by [Rmarkdown](https://github.com/rstudio/rmarkdown)
+(v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.

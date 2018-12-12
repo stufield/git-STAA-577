@@ -6,46 +6,55 @@
 ## Overview
 
 RStudio lab notebooks, full R code, cheat sheets, resources, and *ad
-hoc* notes from “Applied Machine Learning” course Spring 2019
+hoc* notes from “Applied Machine Learning” course Spring 2019.
 
 -----
 
 ## Lab Content
 
-  - Intro Labs
-      - Lab 00 - Basic Exploring
-      - Lab 01 - Subsetting (data frames)
-      - Lab 02 - Data Wrangling with `dplyr` and the `tidyverse`
-      - Lab 03 - Skipped to synchronize course and [textbook
+  - **Intro Labs**
+      - Lab 00: Basic Exploring
+      - Lab 01: Subsetting (data frames)
+      - Lab 02: Data Wrangling with `dplyr` and the `tidyverse`
+      - Lab 03: Skipped to synchronize course and [textbook
         ISLR](https://www-bcf.usc.edu/~gareth/ISL/)
-  - Lab 04
+  - **Lab 04:** Classification
+      - The `S&P` Stock Market Data Set
       - Logistic Regression
-      - Linear and Quadratic Discriminant Analysis
-      - K-nearest Neighbors
-  - Lab 05
-      - Cross-validation
+      - Discriminant Analysis
+      - KNN: K-Nearest Neighbors
+  - **Lab 05:** Cross Validation
+      - The `Auto` Data Set
+      - Cross Validation (by hand)
       - LOOCV (leave-one-out)
-      - K-fold Cross-validation
+      - K-fold CV
       - The Bootstrap
-  - Lab 06
-      - Best Subset Selection
-      - Forward and Backward Stepwise Selection
-      - Ridge Regression
-      - The Lasso
-  - Lab 07
+  - **Lab 06:** Subset Selection
+      - The `Hitters` Data Set
+      - Subset Selection
+      - Shrinkage Methods: Ridge Regression
+      - Shrinkage Methods: The Lasso
+  - **Lab 07:** Beyond Linearity
+      - The `Wage` Data Set
       - Polynomial Regression
       - Polynomial Logistic Regression
-      - Spline Fitting
-  - Lab 08
+      - Spline Regression
+      - General Additive Models
+  - **Lab 08:** Tree-based Methods
+      - The `Carseats` Data Set
       - Classification Trees
       - Regression Trees
       - Bagging
-      - Random Forests
+          - Random Forest
       - Boosting
-  - Lab 09
-      - Support Vector Machines
-      - SVM in Classification
-  - Lab 10
+      - Appendices
+      - Resources
+  - **Lab 09:** Support Vector Machines
+      - Create training data
+      - Support Vector Classifier
+      - Support Vector Machine
+      - ROC curves
+  - **Lab 10:** Unsupervised Learning
       - Principal Component Analysis (PCA)
       - K-means Clustering
       - Heirarchial Clustering
@@ -59,34 +68,15 @@ hoc* notes from “Applied Machine Learning” course Spring 2019
   - **iris**
       - classic iris flower data set from Fisher (**comes with R
         installed**)
-  - **mtcars & mtcars2**
+  - **mtcars**
       - mtcars: USA motor trend cannonical data set (**comes with R
         installed**)
-      - mtcars2: An extension of mtcars by Max Kuhn with updated data
-        and more features (**see Labs/data/mtcars2.rda**)
-  - **Ames Data**
-      - An extension of Ames, Iowa housing data set by Max Kuhn (**must
-        install**)
-      - install with `install.packages("AmesHousing",
-        repos="http://cran.rstudio.com")`
-  - **OkC**
-      - predicting STEM and other for various predictors (**see
-        Labs/data/okc.rda**)
-      - Contains several types of fields:
-          - a number of open text essays related to interests and
-            personal descriptions
-          - single choice type fields, such as profession, diet, gender,
-            body type, etc.
-          - multiple choice data, including languages spoken, etc.
-          - We will try to predict whether someone has a profession in
-            the STEM fields (science, technology, engineering, and math)
-            using a random sample of the overall dataset.
 
-## Cheatsheets:
+## Cheatsheets
 
 RStudio [cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
 
-## GitHub HTML Preview
+## Previewing HTML on GitHub
 
   - Fairly useful tool to preview HTML docs *without* having to clone
     the repository
@@ -172,6 +162,6 @@ Information about the:
 
 -----
 
-Created on 2018-12-05 by the [Rmarkdown
-package](https://github.com/rstudio/rmarkdown) (v1.10) and R version
+Created on 2018-12-12 by
+[Rmarkdown](https://github.com/rstudio/rmarkdown) (v1.10) and R version
 3.5.1 (2018-07-02).
