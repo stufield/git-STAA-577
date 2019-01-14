@@ -1,7 +1,7 @@
 ---
 output:
   github_document:
-    html_preview: false
+    html_preview: true
 ---
 
 
@@ -22,6 +22,16 @@ knitr::opts_chunk$set(
 ## Overview
 RStudio lab notebooks, full R code, cheat sheets, resources, and 
 *ad hoc* notes from "Applied Machine Learning" course Spring 2019.
+
+
+## Why use GitHub?
+We have decided to place the course materials in a GitHub repository 1) to
+familiarize you with this widly used collaborative coding tool, and 2) so that
+you will have access to them beyond your tenure at CSU when you venture
+into the official job market. Jenny Bryan and Jim Hester summarize the
+benefits of GitHub here:
+[Happy Git and GitHub for the useR](https://happygitwithr.com/index.html)
+
 
 ---------------------------
 

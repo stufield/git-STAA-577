@@ -8,6 +8,15 @@
 RStudio lab notebooks, full R code, cheat sheets, resources, and *ad
 hoc* notes from “Applied Machine Learning” course Spring 2019.
 
+## Why use GitHub?
+
+We have decided to place the course materials in a GitHub repository 1)
+to familiarize you with this widly used collaborative coding tool, and
+2) so that you will have access to them beyond your tenure at CSU when
+you venture into the official job market. Jenny Bryan and Jim Hester
+summarize the benefits of GitHub here: [Happy Git and GitHub for the
+useR](https://happygitwithr.com/index.html)
+
 -----
 
 ## Lab Content
@@ -162,6 +171,6 @@ Information about the:
 
 -----
 
-Created on 2018-12-12 by
-[Rmarkdown](https://github.com/rstudio/rmarkdown) (v1.10) and R version
+Created on 2019-01-14 by
+[Rmarkdown](https://github.com/rstudio/rmarkdown) (v1.11) and R version
 3.5.1 (2018-07-02).
