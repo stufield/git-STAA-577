@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# GitHub Repository for STAA 577
+# GitHub Repository for [STAA 577](https://stufield.github.io/git-STAA-577)
 
 
 ## Overview

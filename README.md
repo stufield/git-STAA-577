@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# GitHub Repository for STAA 577
+# GitHub Repository for [STAA 577](https://stufield.github.io/git-STAA-577)
 
 ## Overview
 
