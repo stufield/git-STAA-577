@@ -1,0 +1,407 @@
+---
+title: 'STAA 577: Laboratory Seven </br> Beyond Linearity (`tidyverse`) version'
+author: 'Adapted by Tavener & Field </br> From: James, Witten, Hastie and Tibshirani'
+date: "`r format(Sys.Date(), '%e %B %Y')`"
+output:
+  html_notebook:
+    code_folding: show
+    number_sections: yes
+    toc: yes
+    toc_float:
+      collapsed: no
+ratio: '9:16'
+tables: yes
+fontsize: 12pt
+---
+
+
+### Load necessary libraries {-}
+```{r setup, message = FALSE, warning = FALSE}
+options(warnPartialMatchArgs = FALSE)  # don't want these warnings
+library(magrittr)     # pipes
+library(tibble)       # tibbles
+library(dplyr)        # data wrangling
+library(purrr)        # iteration
+library(broom)        # summarizing models consistently
+library(ggplot2)      # tidy plotting
+library(ISLR)         # Wage data set
+library(splines)      # fitting splines
+library(gam)          # General Additive Models
+```
+
+-----------------------
+
+# The `Wage` Data Set
+```{r data}
+Wage %<>% as.tibble()     # convert to tibble
+dim(Wage)                 # size of dataset
+names(Wage)               # See variables available
+Wage                      # look at tibble to see data
+age      <- Wage$age      # make variable globally available downstream
+wage     <- Wage$wage     # make variable globally available downstream
+agelims  <- range(age)
+age_grid <- seq(from = agelims[1], to = agelims[2])  # sequence from min to max
+wage %>%                  # plot the distribution of the primary response variable of this lab
+  data.frame() %>%        # convert to df for ggplot
+  ggplot2::ggplot(aes(x = wage)) +
+    ggplot2::geom_histogram(binwidth = 5)
+```
+
+
+
+# Polynomial Regression
+
+## Quartic regression
+```{r polynomial_regression}
+# Regression using a basis of orthogonal polynomials of degree 4
+fit <- stats::lm(wage ~ stats::poly(age, degree = 4), data = Wage)
+broom::tidy(fit)
+
+# Fit using a basis of monomials up to degree 4
+fit2 <- stats::lm(wage ~ stats::poly(age, degree = 4, raw = TRUE), data = Wage)
+broom::tidy(fit2)
+
+# Are these the same?
+preds  <- predict(fit, newdata = data.frame(age = age_grid), se = TRUE)
+preds2 <- predict(fit2, newdata = data.frame(age = age_grid), se = TRUE)
+
+# not *identical* but VERY close
+identical(preds$fit, preds2$fit)    # identical() is a bit too strict
+all.equal(preds$fit, preds2$fit, tol = 1e-10)   # use all.equal() with a tolerance
+
+# Here are two further ways of doing the same thing:
+fit2a <- stats::lm(wage ~ age + I(age^2) + I(age^3) + I(age^4), data = Wage)
+fit2b <- stats::lm(wage ~ cbind(age, age^2, age^3, age^4), data = Wage)
+all.equal(coef(fit2a), coef(fit2b), check.attributes = FALSE)
+
+# Plotting with 2 standard error bands:
+fit_preds <- predict(fit, newdata = data.frame(age = age_grid), se = TRUE)
+up        <- fit_preds$fit + 2 * fit_preds$se.fit
+lo        <- fit_preds$fit - 2 * fit_preds$se.fit
+
+# make df for ggplot
+df_fit <- data.frame(     fit = fit_preds$fit,
+                     age_grid = age_grid,
+                           up = up,
+                           lo = lo) %>%
+  tibble::as.tibble()
+
+df_fit      # look at data for lines in `ggplot`
+
+# pass `x` and `y` as df to ggplot
+data.frame(age = age, wage = wage) %>%
+  ggplot(aes(x = age, y = wage)) +
+  geom_point(alpha = 0.25) +
+  labs(title = "Degree-4 Polynomial") +
+  geom_line(data = df_fit, aes(x = age_grid, y = fit), col = "blue") +
+  geom_line(data = df_fit, aes(x = age_grid, y = up),
+            col = "red", linetype = "dashed") +
+  geom_line(data = df_fit, aes(x = age_grid, y = lo),
+            col = "red", linetype = "dashed") +
+  # This trick that allows commenting layer lines above without 
+  # having to manage the `+` signs between layers
+  NULL
+```
+
+
+
+## Analysis of Variance
+Use ANOVA to estimate appropriate degree of polynomial (F-statistic)
+**Note**: the models are *nested*.
+
+### Polynomial models
+```{r AoV1}
+fit_1 <- stats::lm(wage ~ age, data = Wage)
+fit_2 <- stats::lm(wage ~ poly(age, 2), data = Wage)
+fit_3 <- stats::lm(wage ~ poly(age, 3), data = Wage)
+fit_4 <- stats::lm(wage ~ poly(age, 4), data = Wage)
+fit_5 <- stats::lm(wage ~ poly(age, 5), data = Wage)
+anova(fit_1, fit_2, fit_3, fit_4, fit_5)
+
+# Compare p-values (t-statistic) for coefficents of quintic fit
+sumry <- broom::tidy(fit_5)
+sumry
+
+sumry %>%
+  dplyr::pull("statistic") %>%     # retrieve the `statistic` column
+  magrittr::extract(3) %>%         # extract the 3rd entry
+  magrittr::raise_to_power(2)      # Squared; plays nice with %>% operator
+```
+
+### Nested linear models
+```{r AoV2}
+# Perform analysis of variance to determine model
+fit_6 <- stats::lm(wage ~ education + age, data = Wage)
+fit_7 <- stats::lm(wage ~ education + poly(age, 2), data = Wage)
+fit_8 <- stats::lm(wage ~ education + poly(age, 3), data = Wage)
+anova(fit_6, fit_7, fit_8)
+```
+
+
+
+---------------------------
+
+
+# Polynomial Logistic Regression
+
+Default is regression to the logit function which we must 
+transform to obtain probabilities.
+
+```{r polynomial_logistic_regression}
+polyLRfit   <- stats::glm(I(wage > 250) ~ poly(age, 4),
+                          data = Wage, family = "binomial")
+LRpreds <- predict(polyLRfit,
+                   newdata = data.frame(age = age_grid),
+                   type = "link",       # default; predictions in logit space though
+                   #type = "response",  # returns probabilities directly
+                   se = TRUE)           # but errors in logit space is what we need
+upper   <- LRpreds$fit + 2 * LRpreds$se.fit    # CI_97.5% in logit space
+lower   <- LRpreds$fit - 2 * LRpreds$se.fit    # CI_2.5% in logit space
+LRprobs <- exp(LRpreds$fit) / (1 + exp(LRpreds$fit))  # transform -> probability space
+
+# Direct calculation of probabilities via the `type = "response"` argument
+probs <- predict(polyLRfit, newdata = data.frame(age = age_grid),
+                 type = "response")
+all.equal(LRprobs, probs)
+
+# Convert to linear space and tibble df for plotting
+lr_fit <- data.frame(
+  age   = age_grid,
+  prob  = LRprobs,
+  upper = exp(upper) / (1 + exp(upper)),   # transform -> probability space
+  lower = exp(lower) / (1 + exp(lower))    # transform -> probability space
+  ) %>%
+  tibble::as.tibble()
+
+lr_fit       # look at data for lines in `ggplot`
+
+# Pass `x` and `y` as df to ggplot
+data.frame(age = age, y = I(wage > 250)/5) %>%  #  0/1 -> 0/0.2
+  ggplot(aes(x = age, y = y)) +
+  geom_point(alpha = 0.25, size = 2.5) +
+  #geom_jitter(height = 0) + # obscure binning effect; no vertical jitter
+  ylim(c(0, 0.22)) +
+  geom_line(data = lr_fit, aes(x = age, y = prob), col = "blue") +
+  labs(title = "Polynomial Logistic Regression with SE",
+       y = "I(wage > 250)") +
+  geom_line(data = lr_fit, aes(x = age, y = upper),
+            col = "red", linetype = "dashed") +
+  geom_line(data = lr_fit, aes(x = age, y = lower),
+            col = "red", linetype = "dashed") +
+  NULL
+```
+
+
+
+---------------------------
+
+
+# Spline Regression
+
+## Piecewise Constant
+```{r pw_constant}
+table(cut(age, 4))     # Number of observations per bin if split age into 4 groups
+pwc_fit <- stats::lm(wage ~ cut(age, 4), data = Wage) %>% 
+  broom::tidy()
+pwc_fit
+```  
+
+
+Visualize the piece-wise constant graphically:
+```{r pwc_plot}
+# 1) Define new variable `PieceWise` that groups `age` by the cut points above
+# 2) Use `dplyr::recode()` to map those cut points to values
+# corresponding to the y-intercepts of the model
+tbl <- tibble::tibble(age = age, wage = wage) %>%
+  dplyr::mutate(
+    PieceWise = cut(age, 4),
+    yint = dplyr::recode(PieceWise,
+      "(17.9,33.5]" = pwc_fit$estimate[1],                         # Intercept
+      "(33.5,49]"   = pwc_fit$estimate[1] + pwc_fit$estimate[2],   # Intercept + 2nd piece
+      "(49,64.5]"   = pwc_fit$estimate[1] + pwc_fit$estimate[3],   # Intercept + 3rd piece
+      "(64.5,80.1]" = pwc_fit$estimate[1] + pwc_fit$estimate[4]    # Intercept + 4th piece
+    )
+  )
+tbl     # quickly view data to be plotted; particularly `PieceWise` & `yint`
+tbl %>% 
+  ggplot(aes(x = age, y = wage)) +
+  geom_point(alpha = 0.25) +
+  geom_step(aes(x = age, y = yint, color = PieceWise), size = 1.5) +
+  geom_vline(xintercept = c(33.5, 49, 64.5), colour = "blue",
+             linetype = "dashed") + 
+  labs(title = "Piecewise Constant")
+```
+
+
+## B-splines
+Fit `b-spline` (by default a cubic spline) and plot spline +/- 2*standard
+error bounds:
+
+```{r splines}
+b_spline_fit <- stats::lm(wage ~ splines::bs(age, knots = c(25, 40, 60)),
+                          data = Wage)
+bs_pred      <- predict(b_spline_fit,
+                        newdata = data.frame(age = age_grid),
+                        se = TRUE)
+
+# df = (number of degrees of freedom) locates knots based on uniform percentiles of the data
+dim(bs(age, knots = c(25, 40, 60)))
+dim(bs(age, df = 6))
+attr(bs(age, df = 6), "knots")
+
+# Fit a natural spline with df = 4
+ns_spline_fit  <- stats::lm(wage ~ splines::ns(age, df = 4), data = Wage)
+ns_pred        <- predict(ns_spline_fit,
+                          newdata = data.frame(age = age_grid),
+                          se = TRUE)
+
+# Calculate predicted values and standard errors (se), then collect 
+# into a data frame for plotting with `ggplot()`:
+gg_df <- tibble::tibble(      # gather relevant vectors into a tibble
+  age_grid = age_grid,
+  bs_fit   = bs_pred$fit,
+  ns_fit   = ns_pred$fit
+  ) %>%
+  dplyr::mutate(bs_upper = bs_fit + 2 * bs_pred$se.fit,  # calc 2se
+                bs_lower = bs_fit - 2 * bs_pred$se.fit)  # calc 2se
+
+gg_df    # quickly view the fitted plotting data for lines
+
+# pass full `x` and `y` data as df to ggplot
+data.frame(age = age, wage = wage) %>%
+  ggplot(aes(x = age, y = wage)) +
+  geom_point(alpha = 0.25) +
+  geom_line(data = gg_df, aes(x = age_grid, y = bs_fit), col = "blue") +
+  geom_line(data = gg_df, aes(x = age_grid, y = bs_upper),
+            col = "red", linetype = "dashed") +
+  geom_line(data = gg_df, aes(x = age_grid, y = bs_lower),
+            col = "red", linetype = "dashed") +
+  geom_line(data = gg_df, aes(x = age_grid, y = ns_fit), col = "black") +
+  NULL
+```
+
+------------------------
+
+## Smoothing Splines
+Selects smoothing parameter via cross validation
+
+```{r smoothing_splines}
+# Fit a smoothing spline
+smooth_fit <- stats::smooth.spline(age, wage, df = 16)
+
+# Select level of `smoothness` by cross-validation
+smooth_fit_cv <- stats::smooth.spline(age, wage, cv = TRUE)
+smooth_fit_cv$df     # ~7 degrees of freedom for the final spline
+
+# Create a new reorganized df of fitted values for plotting below
+smooth_df <- data.frame(
+  x         = smooth_fit$x,
+  smooth    = smooth_fit$y,
+  smooth_cv = smooth_fit_cv$y
+  ) %>%
+  tidyr::gather(key = "fit", value = "predicted", -x) %>%
+  tibble::as.tibble()
+
+smooth_df    # quickly view the plotting data
+
+full_df <- data.frame(age = age, wage = wage)
+
+full_df %>%
+  ggplot(aes(x = age, y = wage)) +
+  geom_point(alpha = 0.25) +
+  ggtitle("Smoothing Spline") +
+  geom_line(data = smooth_df, aes(x = x, y = predicted, colour = fit)) +
+  scale_colour_manual(values = c("red", "blue"), name = "") +
+  theme(legend.position = "top") +
+  NULL
+```
+
+
+--------------------------
+
+
+# General Additive Models
+
+## Fitting and plotting
+```{r GAM_fit_plot, warning = FALSE, fig.height = 9/2.5, fig.width = 9}
+# Fit a GAM using natural spline (`splines::ns()`)
+gam_ns <- stats::lm(wage ~ splines::ns(year, df = 4) + splines::ns(age, df = 5) + education,
+                    data = Wage)
+
+class(gam_ns)
+
+# We see the `gam_ns` is a `lm` object (above), but the `Gam` plot method will recognize it
+# To plot it, you would need to call `plot.Gam()` explicitly like this:
+# par(mfrow = c(1, 3))
+# plot.Gam(gam_ns, col = "navy")
+
+# Fit GAM using smoothing spline (`gam::s()`)
+# Sum of two splines and a linear function
+gam_m3 <- gam::gam(wage ~ s(year, df = 4) + s(age, df = 5) + education,
+                   data = Wage)
+
+# There is a S3 method for the `plot` generic for objects of class `Gam`
+# We'll make use of it here in lieu of developing our own `ggplot`
+# Exercise: generate your own plot method in `ggplot`?
+par(mfrow = c(1, 3))
+plot(gam_m3, se = TRUE, col = "navy") # Note education takes discrete values
+```
+
+
+## Compare, summarize, and predict
+Fit two additional models and compare to the original `gam_m3` using ANOVA.
+The models are:
+
+  * **gam_m1**: excludes `year` as covariate
+  * **gam_m2**: includes `year` as a *linear* covariate
+  * **gam_m3**: includes `year` as a *non-linear* spline function (`df = 4`)
+
+```{r GAMs_compare_summarize, warning = FALSE}
+gam_m1 <- gam::gam(wage ~ s(age, df = 5) + education, data = Wage)
+par(mfrow = c(1, 3))
+plot(gam_m1, se = TRUE, col = "green")
+
+gam_m2 <- gam::gam(wage ~ year + s(age, df = 5) + education, data = Wage)
+par(mfrow = c(1, 3))
+plot(gam_m2, se = TRUE, col = "navy")
+
+gam_m3 <- gam::gam(wage ~ s(year, df = 4) + s(age, df = 5) + education,
+                   data = Wage)
+par(mfrow = c(1, 3))
+plot(gam_m3, se = TRUE, col = "purple")
+
+anova(gam_m1, gam_m2, gam_m3, test = "F")
+
+# Based on the ANOVA, `gam_m2` is preferred
+summary(gam_m2)
+
+# Don't forget about `broom::tidy()`
+# Easily and consistently summarize model output
+broom::tidy(gam_m2)
+# Compare to `gam_m3`
+broom::tidy(gam_m3)
+```
+
+
+---------------------------
+
+Finally, we use the built-in S3 `Gam` method to the `predict()` generic 
+to make predictions on the training set & calc MSE.
+The `predict()` generic lives in `stats` package.
+It is not necessary to select the model covariates first, this will happen
+internally within `predict`. However, it can be a good practice to do so,
+to ensure you're not accidentally cheating.
+Below we use `dplyr::select` to keep *only* the predictors in the `new data`.
+
+```{r mse}
+pred_wage <- predict(gam_m2, newdata = dplyr::select(Wage, year, age, education))
+mse       <- mean((wage - pred_wage)^2)   # calculate MSE
+mse
+```
+
+
+
+-------------------------------
+
+Created on `r Sys.Date()` by [Rmarkdown](https://github.com/rstudio/rmarkdown)
+(v`r utils::packageVersion("rmarkdown")`) and `r R.version$version.string`.

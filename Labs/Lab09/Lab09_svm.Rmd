@@ -81,10 +81,11 @@ svmfit1$coefs
 inequality constraints when the SV classifier is posed as a quadratic
 programming problem. Through a consideration of the optimality conditions,
 they indicate which of the support vectors lie on the margin and which
-lie outside the margin. For example, point 14 lies outside the margin
-and its coefficient has magnitude equal to the cost.
-Points 1, 7, and 17 have a coefficient with magnitude less than the
-cost, and lie on the margin.
+lie within the margin. For example, point 2, 5, 14 and 16 lie WITHIN the margin
+and their coefficients have magnitude equal to the cost. (The coefficients
+are multiplied by the training labels, hence the positive and negative values). 
+Points 1, 7, and 17 have a coefficient with magnitude less than the cost and 
+lie ON the margin.
 
 
 ### Challenge Exercise
@@ -114,6 +115,7 @@ svmfit2$SV
 svmfit2$coefs   
 ```
 
+**NOTE**: Many more support vectors, most of which lie WITHIN the margin.
 
 -----------------------
 
@@ -243,6 +245,8 @@ sim_data200 <- matrix(rnorm(200 * 2), ncol = 2) %>%
                 y  = factor(y)) %>%   # make classes factor for model building
   tibble::as.tibble() %>%             # convert to tibble
   identity()                          # similar trick as `NULL` in ggplots
+
+sim_data200
 
 sim_data200 %>%
   ggplot(aes(x = F2, y = F1, colour = y)) +

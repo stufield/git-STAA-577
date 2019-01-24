@@ -49,9 +49,10 @@ names(pr_out)
 pr_out$center
 pr_out$scale
 
-# The rotation matrix is the right singular vectors
+# The rotation matrix contains the right singular vectors
 pr_out$rotation
 
+# The x matrix contains the left singular vectors
 dim(pr_out$x)
 biplot(pr_out, scale = 0)
 pr_out$rotation <- -pr_out$rotation
@@ -62,7 +63,7 @@ biplot(pr_out, scale = 0)
 
 
 ```{r singular_vals, fig.width = 8}
-# Singular values
+# sdev contains the singular values
 pr_out$sdev
 pr_var <- pr_out$sdev^2
 pr_var
@@ -162,7 +163,7 @@ km_3_20start <- clust_data %>%
 km_3_20start$tot.withinss
 
 # K-means with K=4 with 20 random starts
-# Calculate total within cluster SSQ (Here we see the danger of "overfitting)
+# Calculate total within cluster SSQ (Here we see the danger of "overfitting")
 km_4_20start <- clust_data %>%
   stats::kmeans(4, nstart = 20)
 km_4_20start$tot.withinss
@@ -240,7 +241,7 @@ matrix(rnorm(30 * 3), ncol = 3) %>%        # 10x3 matrix of random data
   stats::cor() %>%                         # correlation matrix
   magrittr::subtract(1, .) %>%             # subtract from 1
   stats::as.dist() %>%                     # distance matrix-> for `hclust` recognizes
-  stats::hclust(method = "complete") %>%   # perfrom clustering
+  stats::hclust(method = "complete") %>%   # perform clustering
   plot(main = "Complete Linkage with Correlation-Based Distance",   # S3 plot method
        xlab = "", sub = "")
 ```

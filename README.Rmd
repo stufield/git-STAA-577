@@ -1,7 +1,7 @@
 ---
 output:
   github_document:
-    html_preview: false
+    html_preview: true
 ---
 
 
@@ -23,9 +23,18 @@ knitr::opts_chunk$set(
 RStudio lab notebooks, full R code, cheat sheets, resources, and 
 *ad hoc* notes from "Applied Machine Learning" course Spring 2019.
 
+------------------------
+
+## Getting Started with GitHub
+A fantastic reference for using GitHub with `R` and `RStudio` is free online
+from [Jenny Bryan](https://github.com/jennybc). If you **ever** plan to use
+verion control with `GitHub` I **strongly** recommend reading it in detail.
+
+Jenny Bryan's [Happy Git with R](https://happygitwithr.com/)
+
 ---------------------------
 
-## Lab Content
+## Course Lab Content
 * **Intro Labs**
   + Lab 00: Basic Exploring
   + Lab 01: Subsetting (data frames)
@@ -86,7 +95,8 @@ RStudio lab notebooks, full R code, cheat sheets, resources, and
 
 
 ## Cheatsheets
-RStudio [cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
+* [RStudio cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
+* [GitHub Cheatsheet PDFs](https://github.com/rstudio/cheatsheets)
 
 
 ## Previewing HTML on GitHub
@@ -151,12 +161,6 @@ Information about the:
 * The [tidyverse](https://www.tidyverse.org/)
 * The tidyverse [packages](https://www.tidyverse.org/packages/)
 * Converting to the [Tidyverse](http://www.significantdigits.org/2017/10/switching-from-base-r-to-tidyverse/)
-
-
-## RStudio Cheatsheets:
-
-* [Cheat sheet webpage](https://www.rstudio.com/resources/cheatsheets/)
-* [GitHub Cheatsheet PDFs](https://github.com/rstudio/cheatsheets)
 
 
 

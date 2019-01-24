@@ -10,7 +10,18 @@ hoc* notes from “Applied Machine Learning” course Spring 2019.
 
 -----
 
-## Lab Content
+## Getting Started with GitHub
+
+A fantastic reference for using GitHub with `R` and `RStudio` is free
+online from [Jenny Bryan](https://github.com/jennybc). If you **ever**
+plan to use verion control with `GitHub` I **strongly** recommend
+reading it in detail.
+
+Jenny Bryan’s [Happy Git with R](https://happygitwithr.com/)
+
+-----
+
+## Course Lab Content
 
   - **Intro Labs**
       - Lab 00: Basic Exploring
@@ -74,7 +85,9 @@ hoc* notes from “Applied Machine Learning” course Spring 2019.
 
 ## Cheatsheets
 
-RStudio [cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
+  - [RStudio
+    cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
+  - [GitHub Cheatsheet PDFs](https://github.com/rstudio/cheatsheets)
 
 ## Previewing HTML on GitHub
 
@@ -154,14 +167,8 @@ Information about the:
   - Converting to the
     [Tidyverse](http://www.significantdigits.org/2017/10/switching-from-base-r-to-tidyverse/)
 
-## RStudio Cheatsheets:
-
-  - [Cheat sheet
-    webpage](https://www.rstudio.com/resources/cheatsheets/)
-  - [GitHub Cheatsheet PDFs](https://github.com/rstudio/cheatsheets)
-
 -----
 
-Created on 2018-12-12 by
+Created on 2019-01-24 by
 [Rmarkdown](https://github.com/rstudio/rmarkdown) (v1.10) and R version
-3.5.1 (2018-07-02).
+3.5.2 (2018-12-20).
