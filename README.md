@@ -10,14 +10,22 @@ hoc* notes from “Applied Machine Learning” course Spring 2019.
 
 -----
 
-## Getting Started with GitHub
+## Why use GitHub?
 
-A fantastic reference for using GitHub with `R` and `RStudio` is free
-online from [Jenny Bryan](https://github.com/jennybc). If you **ever**
-plan to use verion control with `GitHub` I **strongly** recommend
-reading it in detail.
+We have decided to place the course materials in a `GitHub` repository:
 
-Jenny Bryan’s [Happy Git with R](https://happygitwithr.com/)
+1.  to familiarize you with this widly used collaborative coding tool
+2.  so that you will have access to them beyond your tenure at CSU when
+    you venture into the official job market. [Jenny
+    Bryan](https://github.com/jennybc) and [Jim
+    Hester](https://github.com/jimhester) summarize the benefits of
+    `GitHub` in this fantastic reference
+here:
+
+#### [Happy Git and GitHub for the useR](https://happygitwithr.com/index.html)
+
+If you **ever** plan to use verion control with `GitHub` I **strongly**
+recommend reading it in detail.
 
 -----
 
