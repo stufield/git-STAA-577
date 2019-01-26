@@ -31,49 +31,68 @@ recommend reading it in detail.
 
 ## Course Lab Content
 
-  - **Intro Labs**
-      - Lab 00: Basic Exploring
-      - Lab 01: Subsetting (data frames)
-      - Lab 02: Data Wrangling with `dplyr` and the `tidyverse`
+  - **Intro
+        Labs**
+      - [Lab 00](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab00):
+        Basic
+        Exploring
+      - [Lab 01](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab01):
+        Subsetting (data
+        frames)
+      - [Lab 02](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab02):
+        Data Wrangling with `dplyr` and the `tidyverse`
       - Lab 03: Skipped to synchronize course and [textbook
         ISLR](https://www-bcf.usc.edu/~gareth/ISL/)
-  - **Lab 04:** Classification
+  - [Lab 04](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab04):
+    Classification
       - The `S&P` Stock Market Data Set
       - Logistic Regression
       - Discriminant Analysis
-      - KNN: K-Nearest Neighbors
-  - **Lab 05:** Cross Validation
+      - KNN: K-Nearest
+    Neighbors
+  - [Lab 05](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab05):
+    Cross Validation
       - The `Auto` Data Set
       - Cross Validation (by hand)
       - LOOCV (leave-one-out)
       - K-fold CV
-      - The Bootstrap
-  - **Lab 06:** Subset Selection
+      - The
+    Bootstrap
+  - [Lab 06](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab06):
+    Subset Selection
       - The `Hitters` Data Set
       - Subset Selection
       - Shrinkage Methods: Ridge Regression
-      - Shrinkage Methods: The Lasso
-  - **Lab 07:** Beyond Linearity
+      - Shrinkage Methods: The
+    Lasso
+  - [Lab 07](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab07):
+    Beyond Linearity
       - The `Wage` Data Set
       - Polynomial Regression
       - Polynomial Logistic Regression
       - Spline Regression
-      - General Additive Models
-  - **Lab 08:** Tree-based Methods
+      - General Additive
+    Models
+  - [Lab 08](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab08):
+    Tree-based Methods
       - The `Carseats` Data Set
       - Classification Trees
       - Regression Trees
       - Bagging
-          - Random Forest
+          - Random
+    Forest
       - Boosting
       - Appendices
       - Resources
-  - **Lab 09:** Support Vector Machines
+  - [Lab 09](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab09):
+    Support Vector Machines
       - Create training data
       - Support Vector Classifier
       - Support Vector Machine
-      - ROC curves
-  - **Lab 10:** Unsupervised Learning
+      - ROC
+    curves
+  - [Lab 10](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab10):
+    Unsupervised Learning
       - Principal Component Analysis (PCA)
       - K-means Clustering
       - Heirarchial Clustering
@@ -158,13 +177,16 @@ link
 ## Memory Usage and `rsample`:
 
 The [rsample](https://topepo.github.io/rsample/) package is smarter than
-you might
-    think.
+you might think.
 
-## Vignettes:
+## Vignettes
 
-  - [dplyr](https://cran.r-project.org/web/packages/dplyr/vignettes/dplyr.html)
-  - [tidyr](http://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html)
+  - The
+    [dplyr](https://cran.r-project.org/web/packages/dplyr/vignettes/dplyr.html)
+    vignette
+  - The
+    [tidyr](http://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html)
+    vignette
 
 ## What is the Tidyverse?
 
@@ -177,6 +199,6 @@ Information about the:
 
 -----
 
-Created on 2019-01-24 by
-[Rmarkdown](https://github.com/rstudio/rmarkdown) (v1.10) and R version
+Created on 2019-01-26 by
+[Rmarkdown](https://github.com/rstudio/rmarkdown) (v1.11) and R version
 3.5.2 (2018-12-20).
