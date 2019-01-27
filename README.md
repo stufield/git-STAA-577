@@ -34,6 +34,7 @@ recommend reading it in detail.
   - **Intro
         Labs**
       - [Lab 00](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab00):
+      - [Lab 00](https://github.com/stufield/git-STAA-577/blob/master/Labs/Lab00/00_basic_exploring.nb.html)
         Basic
         Exploring
       - [Lab 01](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab01):
@@ -199,6 +200,6 @@ Information about the:
 
 -----
 
-Created on 2019-01-26 by
+Created on 2019-01-27 by
 [Rmarkdown](https://github.com/rstudio/rmarkdown) (v1.11) and R version
 3.5.2 (2018-12-20).
