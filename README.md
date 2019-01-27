@@ -34,7 +34,6 @@ recommend reading it in detail.
   - **Intro
         Labs**
       - [Lab 00](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab00):
-      - [Lab 00](https://github.com/stufield/git-STAA-577/blob/master/Labs/Lab00/00_basic_exploring.nb.html)
         Basic
         Exploring
       - [Lab 01](https://github.com/stufield/git-STAA-577/tree/master/Labs/Lab01):
@@ -162,6 +161,13 @@ link
   - [R for Data Science Book](http://r4ds.had.co.nz/)
   - Twitter: @hadleywickham
   - GitHub: <https://github.com/hadley>
+
+## Jenny Bryan’s Links
+
+  - [Happy Git with R](https://happygitwithr.com/index.html)
+  - Website: [Jenny Bryan](https://jennybryan.org)
+  - Twitter: @JennyBryan
+  - GitHub: <https://github.com/jennybc>
 
 ## Max Kuhn’s Links
 
